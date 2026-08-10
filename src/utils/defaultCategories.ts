@@ -1,0 +1,95 @@
+import type { Category } from '../types';
+
+export const DEFAULT_CATEGORIES: Category[] = [
+  {
+    id: 'cat-moradia',
+    name: 'Moradia',
+    type: 'expense',
+    color: '#ef4444',
+    icon: 'Home',
+    max_budget: 2500,
+    subcategories: [
+      { id: 'sub-aluguel', category_id: 'cat-moradia', name: 'Aluguel' },
+      { id: 'sub-energia', category_id: 'cat-moradia', name: 'Energia' },
+      { id: 'sub-internet', category_id: 'cat-moradia', name: 'Internet' },
+      { id: 'sub-condominio', category_id: 'cat-moradia', name: 'Condomínio' },
+    ],
+  },
+  {
+    id: 'cat-alimentacao',
+    name: 'Alimentação',
+    type: 'expense',
+    color: '#f59e0b',
+    icon: 'Utensils',
+    max_budget: 1800,
+    subcategories: [
+      { id: 'sub-supermercado', category_id: 'cat-alimentacao', name: 'Supermercado' },
+      { id: 'sub-restaurantes', category_id: 'cat-alimentacao', name: 'Restaurantes' },
+      { id: 'sub-ifood', category_id: 'cat-alimentacao', name: 'iFood / Delivery' },
+    ],
+  },
+  {
+    id: 'cat-transporte',
+    name: 'Transporte',
+    type: 'expense',
+    color: '#3b82f6',
+    icon: 'Car',
+    max_budget: 800,
+    subcategories: [
+      { id: 'sub-combustivel', category_id: 'cat-transporte', name: 'Combustível' },
+      { id: 'sub-uber', category_id: 'cat-transporte', name: 'Uber / Táxi' },
+      { id: 'sub-manutencao', category_id: 'cat-transporte', name: 'Manutenção' },
+    ],
+  },
+  {
+    id: 'cat-lazer',
+    name: 'Lazer & Estilo',
+    type: 'expense',
+    color: '#ec4899',
+    icon: 'Film',
+    max_budget: 600,
+    subcategories: [
+      { id: 'sub-cinema', category_id: 'cat-lazer', name: 'Cinema & Teatros' },
+      { id: 'sub-viagens', category_id: 'cat-lazer', name: 'Viagens' },
+      { id: 'sub-streaming', category_id: 'cat-lazer', name: 'Assinaturas / Streaming' },
+    ],
+  },
+  {
+    id: 'cat-saude',
+    name: 'Saúde & Bem-Estar',
+    type: 'expense',
+    color: '#10b981',
+    icon: 'HeartPulse',
+    max_budget: 500,
+    subcategories: [
+      { id: 'sub-farmacia', category_id: 'cat-saude', name: 'Farmácia' },
+      { id: 'sub-consultas', category_id: 'cat-saude', name: 'Consultas' },
+      { id: 'sub-academia', category_id: 'cat-saude', name: 'Academia' },
+    ],
+  },
+  {
+    id: 'cat-salario',
+    name: 'Salário & Prolabore',
+    type: 'income',
+    color: '#10b981',
+    icon: 'Briefcase',
+    max_budget: 0,
+    subcategories: [
+      { id: 'sub-salario-principal', category_id: 'cat-salario', name: 'Salário Principal' },
+      { id: 'sub-bonus', category_id: 'cat-salario', name: 'Bônus / PLR' },
+    ],
+  },
+  {
+    id: 'cat-investimentos',
+    name: 'Investimentos & Rendimentos',
+    type: 'income',
+    color: '#8b5cf6',
+    icon: 'TrendingUp',
+    max_budget: 0,
+    subcategories: [
+      { id: 'sub-dividendos', category_id: 'cat-investimentos', name: 'Dividendos' },
+      { id: 'sub-fiis', category_id: 'cat-investimentos', name: 'Rendimento FIIs' },
+      { id: 'sub-venda-ativos', category_id: 'cat-investimentos', name: 'Venda de Ativos' },
+    ],
+  },
+];
