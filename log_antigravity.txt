@@ -1,0 +1,170 @@
+# FINTHIGAS — Log de Progresso (Antigravity)
+> Este arquivo serve como guia de contexto para o agente Antigravity.  
+> Leia-o antes de qualquer nova iteração para saber o que foi feito e o que falta fazer.
+
+---
+
+## 🗂️ Stack Técnica
+
+| Item | Tecnologia |
+|------|-----------|
+| Framework | React 19 + Vite 8 + TypeScript 6 |
+| Estilização | Vanilla CSS (`src/index.css`) com CSS variables |
+| Banco de Dados | **Supabase** (PostgreSQL) |
+| Cliente Supabase | `@supabase/supabase-js` v2 |
+| Gráficos | `chart.js` + `react-chartjs-2` (Doughnut, Bar) |
+| Ícones | `lucide-react` |
+| Persistência local | `localStorage` como fallback offline |
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+finthigas/
+├── .env.local                         # Credenciais Supabase (não comitar)
+├── .env.example                       # Modelo de variáveis de ambiente
+├── supabase_schema.sql                # ⚠️ Execute no SQL Editor do Supabase para criar as tabelas
+├── index.html
+├── src/
+│   ├── App.tsx                        # Raiz + FinanceProvider + tabs de navegação
+│   ├── index.css                      # Design System: dark gray/black theme, responsivo
+│   ├── main.tsx
+│   ├── lib/
+│   │   └── supabase.ts                # Cliente Supabase configurado via VITE_*
+│   ├── types/
+│   │   └── index.ts                   # Tipos: Transaction, Category, Subcategory, ScheduledTransaction, etc.
+│   ├── context/
+│   │   └── FinanceContext.tsx         # Estado global: CRUD, sync Supabase, localStorage fallback
+│   ├── utils/
+│   │   ├── formatters.ts              # formatCurrency(BRL), formatDate, getMonthName
+│   │   ├── defaultCategories.ts       # Categorias default (seed local)
+│   │   └── mockData.ts                # Transações de demonstração
+│   └── components/
+│       ├── Header.tsx                 # Logo, filtros de período, badge Supabase, dropdown reset
+│       ├── Navigation.tsx             # Abas (Dashboard, Entradas/Saídas, Programados, Categorias)
+│       ├── SummaryCards.tsx           # KPI cards (Saldo, Entradas, Saídas, Programadas)
+│       ├── Dashboard/
+│       │   ├── DashboardView.tsx      # Monta todos os painéis do Dashboard
+│       │   ├── ExpenseDonutChart.tsx  # Gráfico de rosca de saídas (por categoria ou subcategoria)
+│       │   ├── CashFlowChart.tsx      # Gráfico de barras: Entradas vs Saídas por mês
+│       │   ├── BudgetProgress.tsx     # Barras de limite de gastos por categoria
+│       │   └── TopExpenses.tsx        # Top 5 maiores saídas do período
+│       ├── Transactions/
+│       │   └── TransactionsView.tsx   # Tabela com busca, filtro, CRUD de transações
+│       ├── Scheduled/
+│       │   └── ScheduledView.tsx      # Cards de lançamentos programados com efetivação 1-clique
+│       ├── Categories/
+│       │   └── CategoriesView.tsx     # Gerenciamento de categorias e subcategorias
+│       └── Modals/
+│           ├── TransactionModal.tsx   # Modal de criação/edição de transação
+│           ├── ScheduledModal.tsx     # Modal de criação/edição de agendamento
+│           └── CategoryModal.tsx      # Modal de criação/edição de categoria + subcategorias
+```
+
+---
+
+## 🗄️ Banco de Dados (Supabase)
+
+### Credenciais (`.env.local`)
+```
+VITE_SUPABASE_URL=https://hrqkxaakcknqzeauilyt.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_jYnKZTpuHCPE0U5wmVP3Og_Nsl6_CvA
+```
+
+### Tabelas criadas pelo `supabase_schema.sql`
+1. **`categories`** — Categorias de Entrada/Saída com cor, ícone e limite de orçamento
+2. **`subcategories`** — Subcategorias vinculadas via FK a `categories`
+3. **`transactions`** — Lançamentos pontuais (Entradas e Saídas)
+4. **`scheduled_transactions`** — Lançamentos recorrentes/programados
+
+> ⚠️ **AÇÃO NECESSÁRIA**: Se o badge do header mostrar "Local (Offline)", significa que as tabelas **ainda não foram criadas** no Supabase.  
+> Acesse o painel do Supabase → SQL Editor → cole o conteúdo de `supabase_schema.sql` → Run.
+
+### Por que aparece "Local (Offline)"?
+A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
+- **Antes**: `supabaseConnected = true` apenas se a tabela retornasse DADOS.
+- **Depois**: `supabaseConnected = true` se a QUERY não retornar ERRO (tabelas existentes mas vazias também são válidas).
+
+---
+
+## ✅ O que já foi implementado
+
+### Sessão 1 — Estrutura Base
+- [x] Projeto Vite + React 19 + TypeScript 6 já estava inicializado
+- [x] Dependências: `@supabase/supabase-js`, `chart.js`, `react-chartjs-2`, `lucide-react`
+- [x] `.env.local` criado com credenciais do Supabase
+- [x] `supabase_schema.sql` gerado com tabelas, RLS policies e seed inicial de categorias
+
+### Sessão 1 — Componentes
+- [x] `src/types/index.ts` — Interfaces TypeScript completas
+- [x] `src/lib/supabase.ts` — Cliente Supabase configurado
+- [x] `src/utils/formatters.ts` — formatCurrency(BRL), formatDate, getMonthName
+- [x] `src/utils/defaultCategories.ts` — 7 categorias padrão com subcategorias
+- [x] `src/utils/mockData.ts` — 9 transações + 4 agendamentos de demo
+- [x] `src/context/FinanceContext.tsx` — Estado global + CRUD completo + sync Supabase
+- [x] `src/components/Header.tsx` — Logo, filtros de período, badge status, dropdown reset
+- [x] `src/components/Navigation.tsx` — Abas responsivas (ícone + label)
+- [x] `src/components/SummaryCards.tsx` — 4 KPI cards responsivos
+- [x] `src/components/Dashboard/DashboardView.tsx`
+- [x] `src/components/Dashboard/ExpenseDonutChart.tsx` — Doughnut com toggle categoria/subcategoria
+- [x] `src/components/Dashboard/CashFlowChart.tsx` — Bar chart mensal
+- [x] `src/components/Dashboard/BudgetProgress.tsx` — Progress bars com alertas de limite
+- [x] `src/components/Dashboard/TopExpenses.tsx` — Top 5 gastos
+- [x] `src/components/Transactions/TransactionsView.tsx` — Tabela + busca + filtros
+- [x] `src/components/Scheduled/ScheduledView.tsx` — Cards + efetivação 1-clique
+- [x] `src/components/Categories/CategoriesView.tsx` — CRUD categorias + subcategorias
+- [x] `src/components/Modals/TransactionModal.tsx`
+- [x] `src/components/Modals/ScheduledModal.tsx`
+- [x] `src/components/Modals/CategoryModal.tsx`
+- [x] `src/App.tsx` — Raiz com FinanceProvider e roteamento por tabs
+
+### Sessão 2 — Ajustes e Responsividade
+- [x] Design System refatorado: tema cinza/preto (removido azul-marinho)
+- [x] Layout totalmente responsivo (mobile-first, breakpoints 480/600/640/900px)
+- [x] Nav scrollável horizontal no mobile, labels ocultos abaixo de 500px
+- [x] Tabelas com scroll horizontal em mobile
+- [x] Summary cards em grade 2x2 no mobile, 4 colunas no desktop
+- [x] Dropdown de reset com 2 opções: "Restaurar Demonstração" e "Limpar Tudo (Blank)"
+- [x] Corrigida detecção de `supabaseConnected` (via erro da query, não quantidade de dados)
+- [x] `resetToBlank()` adicionado ao contexto (limpa tudo sem seed)
+
+---
+
+## 🔴 O que AINDA PRECISA ser feito / Pendências
+
+- [ ] **Executar o `supabase_schema.sql` no painel do Supabase** — Sem isso, o app opera em modo local
+- [ ] Autenticação de usuários (Supabase Auth) — Atualmente sem login; todos os dados são compartilhados
+- [ ] Paginação / infinite scroll na tabela de transações (quando houver muitos registros)
+- [ ] Exportação de dados (CSV/PDF)
+- [ ] Notificações de vencimento de contas programadas
+- [ ] Modo offline mais robusto com service worker / PWA
+
+---
+
+## 🧪 Como Rodar Localmente
+
+```bash
+cd d:\00_Arquivos_de_programas\finthigas
+npm run dev
+```
+
+## 🚀 Como Fazer Deploy
+
+```bash
+npm run build
+# A pasta dist/ gerada pode ser publicada em Vercel, Netlify, etc.
+```
+
+---
+
+## 🔑 Variáveis de Ambiente
+
+| Variável | Valor |
+|----------|-------|
+| `VITE_SUPABASE_URL` | `https://hrqkxaakcknqzeauilyt.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | `sb_publishable_jYnKZTpuHCPE0U5wmVP3Og_Nsl6_CvA` |
+
+---
+
+_Última atualização: 2026-08-10 — Sessão 2 (Ajustes de responsividade, tema e UX)_

@@ -45,6 +45,7 @@ interface FinanceContextType {
 
   // Data Actions
   resetToMockData: () => void;
+  resetToBlank: () => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -105,9 +106,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           .from('categories')
           .select('*, subcategories(*)');
 
-        if (!catError && dbCategories && dbCategories.length > 0) {
-          setCategories(dbCategories);
+        // Se não há erro na query de categories, o banco está acessível
+        if (!catError) {
           setSupabaseConnected(true);
+          if (dbCategories && dbCategories.length > 0) {
+            setCategories(dbCategories);
+          }
         }
 
         // Fetch Transactions
@@ -116,9 +120,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           .select('*')
           .order('date', { ascending: false });
 
-        if (!txError && dbTransactions) {
-          setTransactions(dbTransactions);
-          setSupabaseConnected(true);
+        if (!txError && dbTransactions !== null) {
+          // Only replace mock data if Supabase returns transactions
+          if (dbTransactions.length > 0) {
+            setTransactions(dbTransactions);
+          }
         }
 
         // Fetch Scheduled
@@ -127,9 +133,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           .select('*')
           .order('due_date', { ascending: true });
 
-        if (!schError && dbScheduled) {
-          setScheduledTransactions(dbScheduled);
-          setSupabaseConnected(true);
+        if (!schError && dbScheduled !== null) {
+          if (dbScheduled.length > 0) {
+            setScheduledTransactions(dbScheduled);
+          }
         }
       } catch (err) {
         console.warn('Supabase connection error, fallback to LocalStorage:', err);
@@ -445,7 +452,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setCategories(DEFAULT_CATEGORIES);
     setTransactions(MOCK_TRANSACTIONS);
     setScheduledTransactions(MOCK_SCHEDULED);
-    localStorage.clear();
+    localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'categories');
+    localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'transactions');
+    localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'scheduled');
+  };
+
+  const resetToBlank = () => {
+    setCategories([]);
+    setTransactions([]);
+    setScheduledTransactions([]);
+    localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'categories');
+    localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'transactions');
+    localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'scheduled');
   };
 
   return (
@@ -474,6 +492,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addSubcategory,
         deleteSubcategory,
         resetToMockData,
+        resetToBlank,
       }}
     >
       {children}

@@ -12,35 +12,39 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
   return (
     <nav className="nav-tabs">
       <button
+        id="nav-dashboard"
         className={`nav-button ${activeTab === 'dashboard' ? 'active' : ''}`}
         onClick={() => setActiveTab('dashboard')}
       >
-        <LayoutDashboard size={18} />
-        Dashboard & Análises
+        <LayoutDashboard size={17} />
+        <span className="nav-label">Dashboard</span>
       </button>
 
       <button
+        id="nav-transactions"
         className={`nav-button ${activeTab === 'transactions' ? 'active' : ''}`}
         onClick={() => setActiveTab('transactions')}
       >
-        <ArrowLeftRight size={18} />
-        Entradas e Saídas
+        <ArrowLeftRight size={17} />
+        <span className="nav-label">Entradas & Saídas</span>
       </button>
 
       <button
+        id="nav-scheduled"
         className={`nav-button ${activeTab === 'scheduled' ? 'active' : ''}`}
         onClick={() => setActiveTab('scheduled')}
       >
-        <CalendarClock size={18} />
-        Lançamentos Programados
+        <CalendarClock size={17} />
+        <span className="nav-label">Programados</span>
       </button>
 
       <button
+        id="nav-categories"
         className={`nav-button ${activeTab === 'categories' ? 'active' : ''}`}
         onClick={() => setActiveTab('categories')}
       >
-        <Tags size={18} />
-        Categorias & Subcategorias
+        <Tags size={17} />
+        <span className="nav-label">Categorias</span>
       </button>
     </nav>
   );
