@@ -108,62 +108,76 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [scheduledTransactions]);
 
   // Initial Fetch from Supabase
-  useEffect(() => {
-    async function loadFromSupabase() {
-      if (!isSupabaseConfigured) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-
-        // Fetch Categories
-        const { data: dbCategories, error: catError } = await supabase
-          .from('categories')
-          .select('*, subcategories(*)');
-
-        if (!catError) {
-          setSupabaseConnected(true);
-          // Always replace local data with Supabase data when connected
-          // (including empty arrays — user may have cleared everything)
-          if (dbCategories !== null) {
-            if (dbCategories.length > 0) {
-              setCategories(dbCategories);
-            }
-            // If empty, keep defaults/local so app remains usable
-          }
-        }
-
-        // Fetch Transactions — always replace with Supabase truth
-        const { data: dbTransactions, error: txError } = await supabase
-          .from('transactions')
-          .select('*')
-          .order('date', { ascending: false });
-
-        if (!txError && dbTransactions !== null) {
-          // Replace local state with Supabase data (source of truth)
-          setTransactions(dbTransactions);
-        }
-
-        // Fetch Scheduled — always replace with Supabase truth
-        const { data: dbScheduled, error: schError } = await supabase
-          .from('scheduled_transactions')
-          .select('*')
-          .order('due_date', { ascending: true });
-
-        if (!schError && dbScheduled !== null) {
-          setScheduledTransactions(dbScheduled);
-        }
-      } catch (err) {
-        console.warn('Supabase connection error, fallback to LocalStorage:', err);
-      } finally {
-        setLoading(false);
-      }
+  // Fetch function to sync with Supabase
+  const loadFromSupabase = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
     }
 
-    loadFromSupabase();
+    try {
+      setLoading(true);
+
+      // Fetch Categories
+      const { data: dbCategories, error: catError } = await supabase
+        .from('categories')
+        .select('*, subcategories(*)');
+
+      if (!catError) {
+        setSupabaseConnected(true);
+        if (dbCategories !== null && dbCategories.length > 0) {
+          setCategories(dbCategories);
+        }
+      }
+
+      // Fetch Transactions — source of truth
+      const { data: dbTransactions, error: txError } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (!txError && dbTransactions !== null) {
+        setTransactions(dbTransactions);
+      }
+
+      // Fetch Scheduled — source of truth
+      const { data: dbScheduled, error: schError } = await supabase
+        .from('scheduled_transactions')
+        .select('*')
+        .order('due_date', { ascending: true });
+
+      if (!schError && dbScheduled !== null) {
+        setScheduledTransactions(dbScheduled);
+      }
+    } catch (err) {
+      console.warn('Supabase connection error, fallback to LocalStorage:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Initial Fetch & Auto-sync on window focus / tab switch (mobile / desktop sync)
+  useEffect(() => {
+    loadFromSupabase();
+
+    const handleFocus = () => {
+      loadFromSupabase();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadFromSupabase();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadFromSupabase]);
 
   // Realtime subscriptions for cross-device sync
   useEffect(() => {
@@ -279,8 +293,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // --- CRUD TRANSACTIONS ---
   const addTransaction = useCallback(async (txData: Omit<Transaction, 'id' | 'created_at'>) => {
-    if (supabaseConnected) {
+    if (isSupabaseConfigured) {
       try {
+        // Attempt 1: Insert with full data including receipt fields
         const { data, error } = await supabase.from('transactions').insert([
           {
             description: txData.description,
@@ -298,17 +313,34 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ]).select().single();
 
         if (error) {
-          console.error('Supabase transaction insert error:', error);
-          // Fallback: insert locally with temp ID
-          const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
-          setTransactions((prev) => [newTx, ...prev]);
+          console.warn('Supabase insert attempt 1 failed (trying without receipt columns):', error.message);
+          // Fallback Attempt 2: Retry insert without receipt columns in case DB schema hasn't been updated yet
+          const { data: retryData, error: retryError } = await supabase.from('transactions').insert([
+            {
+              description: txData.description,
+              amount: txData.amount,
+              type: txData.type,
+              date: txData.date,
+              category_id: txData.category_id || null,
+              subcategory_id: txData.subcategory_id || null,
+              payment_method: txData.payment_method || 'Pix',
+              is_paid: txData.is_paid,
+              notes: txData.notes || null,
+            },
+          ]).select().single();
+
+          if (retryError) {
+            console.error('Supabase retry insert failed:', retryError);
+            const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
+            setTransactions((prev) => [newTx, ...prev]);
+          } else if (retryData) {
+            setSupabaseConnected(true);
+            const fullTx = { ...(retryData as Transaction), receipt_url: txData.receipt_url, receipt_name: txData.receipt_name };
+            setTransactions((prev) => [fullTx, ...prev.filter((t) => t.id !== fullTx.id)]);
+          }
         } else if (data) {
-          // Use real UUID from Supabase
-          setTransactions((prev) => {
-            // If realtime already added it, replace; otherwise prepend
-            if (prev.find((t) => t.id === data.id)) return prev;
-            return [data as Transaction, ...prev];
-          });
+          setSupabaseConnected(true);
+          setTransactions((prev) => [data as Transaction, ...prev.filter((t) => t.id !== data.id)]);
         }
       } catch (err) {
         console.error('Supabase insert failed:', err);
@@ -320,7 +352,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
       setTransactions((prev) => [newTx, ...prev]);
     }
-  }, [supabaseConnected]);
+  }, []);
 
   const updateTransaction = useCallback(async (id: string, updatedData: Partial<Transaction>) => {
     setTransactions((prev) =>

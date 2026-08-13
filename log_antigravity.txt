@@ -155,24 +155,20 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - Contador no topo: nº ativos, nº vencidos, soma das saídas a vencer
 - Confirmação de efetivação informa o que vai acontecer ("será removido" ou "data será avançada")
 
-### Sessão 4 — Correções Visuais (Mobile/Desktop), ErrorBoundary & Upload de Comprovantes
+### Sessão 4.1 — Ajustes Finais no Gráfico (Centralização & Cor Legenda) e Sincronização Cross-Device
 > Data: 2026-08-13
 
-#### 🟢 ErrorBoundary & Prevenção de Tela Preta (`src/components/ErrorBoundary.tsx` + `App.tsx`)
-- Criado o componente de **ErrorBoundary** para capturar exceções de tempo de execução no React 19.
-- Impede a tela preta vazia em caso de erros não tratados, apresentando um card amigável para recarregar a página ou limpar o cache com segurança.
-- Protegidos os inicializadores do `localStorage` em `FinanceContext.tsx` com bloco `try/catch` defensivo.
+#### 🟢 Centralização do "TOTAL GASTOS" ([ExpenseDonutChart.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/components/Dashboard/ExpenseDonutChart.tsx))
+- **Solução por Plugin Canvas (`afterDraw`)**: Substituído o overlay HTML com `left: 32%` por um plugin nativo do Chart.js que obtém as coordenadas exatas `(x, y)` do centro do anel Doughnut.
+- A frase "TOTAL GASTOS" e o valor consolidado ficam perfeitamente centralizados no gráfico em todas as telas (Desktop, Notebook, Tablet e Mobile).
 
-#### 🟢 Correção do Gráfico no Mobile/Desktop (`src/components/Dashboard/ExpenseDonutChart.tsx`)
-- **Causa da tela preta corrigida**: a chamada direta a `ChartJS.defaults.plugins.legend.labels.generateLabels(chart)` foi removida.
-- Implementado gerador de rótulos seguro e defensivo diretamente no `generateLabels`, evitando falha de runtime do Chart.js que desmontava a árvore do React.
+#### 🟢 Cor da Fonte das Legendas ([ExpenseDonutChart.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/components/Dashboard/ExpenseDonutChart.tsx))
+- Adicionada a propriedade `fontColor: '#e2e8f0'` no objeto gerador de legendas `generateLabels`.
+- Os textos das categorias (ex: *Alimentação*, *Moradia*) agora são renderizados em cor cinza claro/branco totalmente legível no tema escuro.
 
-#### 🟣 Upload e Anexo de Comprovantes de Pagamento (Dívidas & Transações)
-- **`src/types/index.ts`**: adicionadas as propriedades opcionais `receipt_url` e `receipt_name` à interface `Transaction`.
-- **`supabase_schema.sql`**: adicionadas as colunas `receipt_url` e `receipt_name` com instrução `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS ...`.
-- **`src/components/Modals/TransactionModal.tsx`**: adicionado campo de upload para anexar recibos, comprovantes Pix e notas fiscais (JPG, PNG, PDF até 5MB).
-- **`src/components/Modals/ExecuteScheduledModal.tsx` + `ScheduledView.tsx`**: criado o modal de baixa de dívida/agendamento. Ao efetivar um lançamento programado, o usuário pode definir a data real, a forma de pagamento, observações e **anexar o comprovante de pagamento**.
-- **`src/components/Modals/ReceiptViewerModal.tsx` + `TransactionsView.tsx`**: adicionado o ícone de documento/comprovante na tabela de Entradas/Saídas. Clicar no botão abre o modal visualizador permitindo preview da imagem ou abertura/download do PDF.
+#### 🟣 Sincronização Cross-Device Desktop ↔ Mobile ([FinanceContext.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/context/FinanceContext.tsx))
+- **Refetch Automático no Foco / Alternância de Aba**: Adicionados listeners dos eventos `focus` e `visibilitychange`. Ao abrir a aba ou desbloquear a tela do celular, o app busca automaticamente os lançamentos atualizados no Supabase.
+- **Fallback Inteligente no Insert**: Se o Supabase ainda não tiver as colunas de comprovante no PostgreSQL, o `addTransaction` tenta novamente sem essas colunas, garantindo que a transação (baixa, valor, categoria, data) **SEJA SALVA no Supabase e apareça no mobile** sem travar o sync.
 
 ---
 

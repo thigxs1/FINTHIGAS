@@ -105,13 +105,13 @@ export const ExpenseDonutChart: React.FC = () => {
                   lineWidth: style.borderWidth || 2,
                   hidden: meta.data?.[i]?.hidden || false,
 
+                  fontColor: '#e2e8f0',
                   index: i,
                 };
               });
             }
             return [];
           },
-
         },
       },
       tooltip: {
@@ -125,6 +125,34 @@ export const ExpenseDonutChart: React.FC = () => {
       },
     },
     cutout: '72%',
+  };
+
+  // Canvas plugin to mathematically center "TOTAL GASTOS" inside the donut ring on desktop
+  const centerTextPlugin = {
+    id: 'centerText',
+    afterDraw(chart: any) {
+      if (isMobile) return;
+      const { ctx } = chart;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data || !meta.data.length) return;
+
+      const x = meta.data[0].x;
+      const y = meta.data[0].y;
+
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.font = '600 11px Inter, sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('TOTAL GASTOS', x, y - 10);
+
+      ctx.font = 'bold 16px Outfit, sans-serif';
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillText(formatCurrency(totalExpenseSum), x, y + 10);
+
+      ctx.restore();
+    },
   };
 
   // Chart height: taller on mobile because legend goes below
@@ -172,25 +200,7 @@ export const ExpenseDonutChart: React.FC = () => {
         </div>
       ) : (
         <div style={{ position: 'relative', height: `${chartHeight}px`, width: '100%', marginTop: '10px' }}>
-          <Doughnut data={chartData} options={chartOptions} />
-
-          {/* Center label — only shown when legend is on the right (desktop) */}
-          {!isMobile && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '50%',
-                // On desktop with right legend, chart area is ~65-70% of width; center at 32%
-                left: '32%',
-                transform: 'translate(-50%, -50%)',
-                textAlign: 'center',
-                pointerEvents: 'none',
-              }}
-            >
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>TOTAL GASTOS</span>
-              <strong style={{ fontSize: '1.1rem', color: '#f43f5e' }}>{formatCurrency(totalExpenseSum)}</strong>
-            </div>
-          )}
+          <Doughnut data={chartData} options={chartOptions} plugins={[centerTextPlugin]} />
         </div>
       )}
 
