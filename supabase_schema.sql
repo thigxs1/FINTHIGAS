@@ -34,8 +34,14 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     payment_method TEXT DEFAULT 'Pix',
     is_paid BOOLEAN NOT NULL DEFAULT true,
     notes TEXT,
+    receipt_url TEXT,
+    receipt_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Garantir adição das colunas caso a tabela já exista
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_url TEXT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_name TEXT;
 
 -- 4. TABELA DE TRANSAÇÕES PROGRAMADAS (RECORRENTES)
 CREATE TABLE IF NOT EXISTS public.scheduled_transactions (

@@ -6,6 +6,7 @@ import { DashboardView } from './components/Dashboard/DashboardView';
 import { TransactionsView } from './components/Transactions/TransactionsView';
 import { ScheduledView } from './components/Scheduled/ScheduledView';
 import { CategoriesView } from './components/Categories/CategoriesView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -27,8 +28,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <FinanceProvider>
-      <AppContent />
-    </FinanceProvider>
+    <ErrorBoundary>
+      <FinanceProvider>
+        <AppContent />
+      </FinanceProvider>
+    </ErrorBoundary>
   );
 }
+

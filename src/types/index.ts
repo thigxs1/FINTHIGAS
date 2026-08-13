@@ -31,6 +31,8 @@ export interface Transaction {
   payment_method?: string;
   is_paid: boolean;
   notes?: string;
+  receipt_url?: string;
+  receipt_name?: string;
   created_at?: string;
   category?: Category;
   subcategory?: Subcategory;

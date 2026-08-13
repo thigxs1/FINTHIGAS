@@ -4,6 +4,7 @@ import type { ScheduledTransaction } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Plus, CalendarClock, CheckCircle, Edit2, Trash2, Repeat, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { ScheduledModal } from '../Modals/ScheduledModal';
+import { ExecuteScheduledModal } from '../Modals/ExecuteScheduledModal';
 
 // Returns status info based on due_date
 function getScheduledStatus(dueDateStr: string): { label: string; color: string; icon: React.ReactNode } {
@@ -25,10 +26,11 @@ function getScheduledStatus(dueDateStr: string): { label: string; color: string;
 }
 
 export const ScheduledView: React.FC = () => {
-  const { scheduledTransactions, categories, executeScheduledTransaction, deleteScheduledTransaction } = useFinance();
+  const { scheduledTransactions, categories, deleteScheduledTransaction } = useFinance();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingScheduled, setEditingScheduled] = useState<ScheduledTransaction | null>(null);
+  const [executingScheduled, setExecutingScheduled] = useState<ScheduledTransaction | null>(null);
 
   // Only show active scheduled items
   const activeScheduled = scheduledTransactions.filter((s) => s.is_active);
@@ -49,13 +51,8 @@ export const ScheduledView: React.FC = () => {
     }
   };
 
-  const handleExecute = async (stx: ScheduledTransaction) => {
-    const actionLabel = stx.frequency === 'once'
-      ? 'O agendamento será removido após a efetivação.'
-      : `Próximo vencimento será avançado automaticamente.`;
-    if (confirm(`Confirmar efetivação de "${stx.description}" no valor de ${formatCurrency(stx.amount)}?\n\n${actionLabel}`)) {
-      await executeScheduledTransaction(stx);
-    }
+  const handleExecute = (stx: ScheduledTransaction) => {
+    setExecutingScheduled(stx);
   };
 
   const frequencyLabels: Record<string, string> = {
@@ -203,6 +200,11 @@ export const ScheduledView: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         editingScheduled={editingScheduled}
+      />
+
+      <ExecuteScheduledModal
+        scheduled={executingScheduled}
+        onClose={() => setExecutingScheduled(null)}
       />
     </div>
   );

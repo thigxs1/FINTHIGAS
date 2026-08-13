@@ -155,16 +155,39 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - Contador no topo: nº ativos, nº vencidos, soma das saídas a vencer
 - Confirmação de efetivação informa o que vai acontecer ("será removido" ou "data será avançada")
 
+### Sessão 4 — Correções Visuais (Mobile/Desktop), ErrorBoundary & Upload de Comprovantes
+> Data: 2026-08-13
+
+#### 🟢 ErrorBoundary & Prevenção de Tela Preta (`src/components/ErrorBoundary.tsx` + `App.tsx`)
+- Criado o componente de **ErrorBoundary** para capturar exceções de tempo de execução no React 19.
+- Impede a tela preta vazia em caso de erros não tratados, apresentando um card amigável para recarregar a página ou limpar o cache com segurança.
+- Protegidos os inicializadores do `localStorage` em `FinanceContext.tsx` com bloco `try/catch` defensivo.
+
+#### 🟢 Correção do Gráfico no Mobile/Desktop (`src/components/Dashboard/ExpenseDonutChart.tsx`)
+- **Causa da tela preta corrigida**: a chamada direta a `ChartJS.defaults.plugins.legend.labels.generateLabels(chart)` foi removida.
+- Implementado gerador de rótulos seguro e defensivo diretamente no `generateLabels`, evitando falha de runtime do Chart.js que desmontava a árvore do React.
+
+#### 🟣 Upload e Anexo de Comprovantes de Pagamento (Dívidas & Transações)
+- **`src/types/index.ts`**: adicionadas as propriedades opcionais `receipt_url` e `receipt_name` à interface `Transaction`.
+- **`supabase_schema.sql`**: adicionadas as colunas `receipt_url` e `receipt_name` com instrução `ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS ...`.
+- **`src/components/Modals/TransactionModal.tsx`**: adicionado campo de upload para anexar recibos, comprovantes Pix e notas fiscais (JPG, PNG, PDF até 5MB).
+- **`src/components/Modals/ExecuteScheduledModal.tsx` + `ScheduledView.tsx`**: criado o modal de baixa de dívida/agendamento. Ao efetivar um lançamento programado, o usuário pode definir a data real, a forma de pagamento, observações e **anexar o comprovante de pagamento**.
+- **`src/components/Modals/ReceiptViewerModal.tsx` + `TransactionsView.tsx`**: adicionado o ícone de documento/comprovante na tabela de Entradas/Saídas. Clicar no botão abre o modal visualizador permitindo preview da imagem ou abertura/download do PDF.
+
 ---
 
 ## 🔴 O que AINDA PRECISA ser feito / Pendências
 
 - [ ] **Habilitar Realtime no Supabase** para `transactions` e `scheduled_transactions` (Dashboard → Database → Replication)
+- [ ] Executar o `ALTER TABLE` no SQL Editor do Supabase se o projeto já tiver sido criado anteriormente:
+  ```sql
+  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_url TEXT;
+  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_name TEXT;
+  ```
 - [ ] Autenticação de usuários (Supabase Auth) — Atualmente sem login; todos os devices compartilham os mesmos dados (single-tenant)
 - [ ] Paginação / infinite scroll na tabela de transações (quando houver muitos registros)
 - [ ] Exportação de dados (CSV/PDF)
 - [ ] Notificações de vencimento de contas programadas
-- [ ] Modo offline mais robusto com service worker / PWA
 
 ---
 
@@ -194,4 +217,5 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-13 — Sessão 3 (Sync cross-device, mobile responsiveness, lógica Programados)_
+_Última atualização: 2026-08-13 — Sessão 4 (Fixes visuais mobile/desktop, ErrorBoundary, Upload de comprovantes em baixa de dívidas e transações)_
+

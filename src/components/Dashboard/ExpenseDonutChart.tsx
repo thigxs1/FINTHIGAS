@@ -90,17 +90,28 @@ export const ExpenseDonutChart: React.FC = () => {
             size: isMobile ? 11 : 12,
           },
           padding: isMobile ? 10 : 14,
-          // Truncate long labels on mobile
-          generateLabels: (chart: ChartJS) => {
-            const original = ChartJS.defaults.plugins.legend.labels.generateLabels(chart);
-            if (isMobile) {
-              return original.map((label) => ({
-                ...label,
-                text: label.text.length > 18 ? label.text.substring(0, 18) + '…' : label.text,
-              }));
+          // Safely format legend labels on mobile
+          generateLabels: (chart: any) => {
+            const data = chart.data;
+            if (data.labels && data.labels.length && data.datasets && data.datasets.length) {
+              return data.labels.map((label: string, i: number) => {
+                const meta = chart.getDatasetMeta(0);
+                const style = meta.controller ? meta.controller.getStyle(i, true) : {};
+                const text = isMobile && label.length > 18 ? label.substring(0, 18) + '…' : label;
+                return {
+                  text,
+                  fillStyle: style.backgroundColor || (data.datasets[0].backgroundColor as string[])?.[i],
+                  strokeStyle: style.borderColor || '#090d16',
+                  lineWidth: style.borderWidth || 2,
+                  hidden: meta.data?.[i]?.hidden || false,
+
+                  index: i,
+                };
+              });
             }
-            return original;
+            return [];
           },
+
         },
       },
       tooltip: {

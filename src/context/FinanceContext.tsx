@@ -32,7 +32,10 @@ interface FinanceContextType {
   addScheduledTransaction: (stx: Omit<ScheduledTransaction, 'id' | 'created_at'>) => Promise<void>;
   updateScheduledTransaction: (id: string, stx: Partial<ScheduledTransaction>) => Promise<void>;
   deleteScheduledTransaction: (id: string) => Promise<void>;
-  executeScheduledTransaction: (stx: ScheduledTransaction) => Promise<void>;
+  executeScheduledTransaction: (
+    stx: ScheduledTransaction,
+    details?: { payment_method?: string; notes?: string; receipt_url?: string; receipt_name?: string; date?: string }
+  ) => Promise<void>;
   
   // Category CRUD
   addCategory: (cat: Omit<Category, 'id' | 'created_at'>) => Promise<void>;
@@ -61,19 +64,32 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'categories');
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'categories');
+      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    } catch {
+      return DEFAULT_CATEGORIES;
+    }
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'transactions');
-    return saved ? JSON.parse(saved) : MOCK_TRANSACTIONS;
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'transactions');
+      return saved ? JSON.parse(saved) : MOCK_TRANSACTIONS;
+    } catch {
+      return MOCK_TRANSACTIONS;
+    }
   });
 
   const [scheduledTransactions, setScheduledTransactions] = useState<ScheduledTransaction[]>(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'scheduled');
-    return saved ? JSON.parse(saved) : MOCK_SCHEDULED;
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'scheduled');
+      return saved ? JSON.parse(saved) : MOCK_SCHEDULED;
+    } catch {
+      return MOCK_SCHEDULED;
+    }
   });
+
 
   const [loading, setLoading] = useState<boolean>(true);
   const [supabaseConnected, setSupabaseConnected] = useState<boolean>(false);
@@ -276,6 +292,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             payment_method: txData.payment_method || 'Pix',
             is_paid: txData.is_paid,
             notes: txData.notes || null,
+            receipt_url: txData.receipt_url || null,
+            receipt_name: txData.receipt_name || null,
           },
         ]).select().single();
 
@@ -394,18 +412,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [supabaseConnected]);
 
-  const executeScheduledTransaction = useCallback(async (stx: ScheduledTransaction) => {
+  const executeScheduledTransaction = useCallback(async (
+    stx: ScheduledTransaction,
+    details?: { payment_method?: string; notes?: string; receipt_url?: string; receipt_name?: string; date?: string }
+  ) => {
     // 1. Create real transaction (marked as paid)
     await addTransaction({
       description: stx.description,
       amount: stx.amount,
       type: stx.type,
-      date: new Date().toISOString().split('T')[0],
+      date: details?.date || new Date().toISOString().split('T')[0],
       category_id: stx.category_id,
       subcategory_id: stx.subcategory_id,
-      payment_method: 'Pix',
+      payment_method: details?.payment_method || 'Pix',
       is_paid: true,
-      notes: `Efetivado de agendamento (${stx.frequency})`,
+      notes: details?.notes || `Efetivado de agendamento (${stx.frequency})`,
+      receipt_url: details?.receipt_url,
+      receipt_name: details?.receipt_name,
     });
 
     // 2. For 'once': DELETE the scheduled item so it disappears from Programados

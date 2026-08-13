@@ -27,6 +27,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState('Pix');
   const [isPaid, setIsPaid] = useState(true);
   const [notes, setNotes] = useState('');
+  const [receiptUrl, setReceiptUrl] = useState<string | undefined>(undefined);
+  const [receiptName, setReceiptName] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (editingTransaction) {
@@ -39,6 +41,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setPaymentMethod(editingTransaction.payment_method || 'Pix');
       setIsPaid(editingTransaction.is_paid);
       setNotes(editingTransaction.notes || '');
+      setReceiptUrl(editingTransaction.receipt_url);
+      setReceiptName(editingTransaction.receipt_name);
     } else {
       setType(initialType);
       setDescription('');
@@ -50,6 +54,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setPaymentMethod('Pix');
       setIsPaid(true);
       setNotes('');
+      setReceiptUrl(undefined);
+      setReceiptName(undefined);
     }
   }, [editingTransaction, initialType, isOpen, categories]);
 
@@ -59,6 +65,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const availableCategories = categories.filter((c) => c.type === type);
   const selectedCategoryObj = categories.find((c) => c.id === categoryId);
   const availableSubcategories = selectedCategoryObj?.subcategories || [];
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('O arquivo selecionado é maior que 5MB. Por favor, escolha um arquivo menor.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setReceiptUrl(event.target?.result as string);
+      setReceiptName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveReceipt = () => {
+    setReceiptUrl(undefined);
+    setReceiptName(undefined);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +105,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       payment_method: paymentMethod,
       is_paid: isPaid,
       notes,
+      receipt_url: receiptUrl,
+      receipt_name: receiptName,
     };
 
     if (editingTransaction) {
@@ -243,6 +273,56 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
+            </div>
+
+            {/* Receipt Upload (Comprovante) */}
+            <div className="form-group">
+              <label>Comprovante de Pagamento (Anexo)</label>
+              <small>Envie foto/imagem do recibo, comprovante Pix ou PDF da nota fiscal (máx 5MB)</small>
+              {receiptUrl ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    background: 'rgba(124, 58, 237, 0.1)',
+                    border: '1px solid rgba(124, 58, 237, 0.3)',
+                    borderRadius: '8px',
+                    marginTop: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    <span style={{ fontSize: '1.1rem' }}>📄</span>
+                    <span
+                      style={{
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {receiptName || 'Comprovante_Anexado'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                    onClick={handleRemoveReceipt}
+                  >
+                    Remover
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,application/pdf"
+                  onChange={handleFileChange}
+                  style={{ marginTop: '4px' }}
+                />
+              )}
             </div>
           </div>
 

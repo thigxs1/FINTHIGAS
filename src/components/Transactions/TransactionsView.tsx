@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { Transaction, TransactionType } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText } from 'lucide-react';
 import { TransactionModal } from '../Modals/TransactionModal';
+import { ReceiptViewerModal } from '../Modals/ReceiptViewerModal';
 
 export const TransactionsView: React.FC = () => {
   const { filteredTransactions, categories, deleteTransaction } = useFinance();
@@ -13,6 +14,7 @@ export const TransactionsView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('expense');
+  const [viewingReceiptTx, setViewingReceiptTx] = useState<Transaction | null>(null);
 
   const handleOpenNew = (type: TransactionType) => {
     setEditingTransaction(null);
@@ -169,6 +171,16 @@ export const TransactionsView: React.FC = () => {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                        {tx.receipt_url && (
+                          <button
+                            className="btn-secondary"
+                            style={{ padding: '6px', color: '#7c3aed', borderColor: 'rgba(124, 58, 237, 0.4)' }}
+                            onClick={() => setViewingReceiptTx(tx)}
+                            title="Ver Comprovante de Pagamento"
+                          >
+                            <FileText size={14} />
+                          </button>
+                        )}
                         <button className="btn-secondary" style={{ padding: '6px' }} onClick={() => handleEdit(tx)}>
                           <Edit2 size={14} />
                         </button>
@@ -190,6 +202,11 @@ export const TransactionsView: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         initialType={modalInitialType}
         editingTransaction={editingTransaction}
+      />
+
+      <ReceiptViewerModal
+        transaction={viewingReceiptTx}
+        onClose={() => setViewingReceiptTx(null)}
       />
     </div>
   );
