@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency } from '../../utils/formatters';
 import { Chart as ChartJS, ArcElement, Tooltip as ChartJsTooltip, Legend as ChartJsLegend } from 'chart.js';
@@ -9,6 +9,19 @@ ChartJS.register(ArcElement, ChartJsTooltip, ChartJsLegend);
 export const ExpenseDonutChart: React.FC = () => {
   const { categories, filteredTransactions } = useFinance();
   const [viewMode, setViewMode] = useState<'category' | 'subcategory'>('category');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Detect mobile breakpoint via ResizeObserver
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setIsMobile(entry.contentRect.width < 520);
+      }
+    });
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Filter only expense transactions
   const expenses = filteredTransactions.filter((tx) => tx.type === 'expense');
@@ -68,14 +81,26 @@ export const ExpenseDonutChart: React.FC = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'right' as const,
+        // Move legend below chart on mobile to prevent clipping
+        position: (isMobile ? 'bottom' : 'right') as 'bottom' | 'right',
         labels: {
           color: '#94a3b8',
           font: {
             family: 'Inter',
-            size: 12,
+            size: isMobile ? 11 : 12,
           },
-          padding: 14,
+          padding: isMobile ? 10 : 14,
+          // Truncate long labels on mobile
+          generateLabels: (chart: ChartJS) => {
+            const original = ChartJS.defaults.plugins.legend.labels.generateLabels(chart);
+            if (isMobile) {
+              return original.map((label) => ({
+                ...label,
+                text: label.text.length > 18 ? label.text.substring(0, 18) + '…' : label.text,
+              }));
+            }
+            return original;
+          },
         },
       },
       tooltip: {
@@ -91,8 +116,11 @@ export const ExpenseDonutChart: React.FC = () => {
     cutout: '72%',
   };
 
+  // Chart height: taller on mobile because legend goes below
+  const chartHeight = isMobile ? 220 : 280;
+
   return (
-    <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="glass-card" ref={containerRef} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="section-header">
         <h3 className="section-title">
           <span style={{ color: '#f43f5e' }}>●</span> Distribuição de Saídas (Gastos)
@@ -132,20 +160,35 @@ export const ExpenseDonutChart: React.FC = () => {
           Nenhuma saída registrada neste período.
         </div>
       ) : (
-        <div style={{ position: 'relative', height: '280px', width: '100%', marginTop: '10px' }}>
+        <div style={{ position: 'relative', height: `${chartHeight}px`, width: '100%', marginTop: '10px' }}>
           <Doughnut data={chartData} options={chartOptions} />
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '35%',
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-              pointerEvents: 'none',
-            }}
-          >
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>TOTAL GASTOS</span>
-            <strong style={{ fontSize: '1.2rem', color: '#f43f5e' }}>{formatCurrency(totalExpenseSum)}</strong>
+
+          {/* Center label — only shown when legend is on the right (desktop) */}
+          {!isMobile && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                // On desktop with right legend, chart area is ~65-70% of width; center at 32%
+                left: '32%',
+                transform: 'translate(-50%, -50%)',
+                textAlign: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>TOTAL GASTOS</span>
+              <strong style={{ fontSize: '1.1rem', color: '#f43f5e' }}>{formatCurrency(totalExpenseSum)}</strong>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* On mobile, show total below chart since center text doesn't fit well */}
+      {isMobile && activeData.length > 0 && (
+        <div style={{ textAlign: 'center', marginTop: '8px', paddingBottom: '4px' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>TOTAL GASTOS</span>
+          <div>
+            <strong style={{ fontSize: '1.1rem', color: '#f43f5e' }}>{formatCurrency(totalExpenseSum)}</strong>
           </div>
         </div>
       )}

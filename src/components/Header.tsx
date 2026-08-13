@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { Wallet, ChevronDown, Database, CheckCircle2, AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
 import { getMonthName } from '../utils/formatters';
@@ -7,6 +7,8 @@ export const Header: React.FC = () => {
   const { periodFilter, setPeriodFilter, supabaseConnected, resetToMockData, resetToBlank } = useFinance();
   const [showResetMenu, setShowResetMenu] = useState(false);
   const resetRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [dropdownTop, setDropdownTop] = useState(0);
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setPeriodFilter((prev) => ({ ...prev, year: Number(e.target.value) }));
@@ -15,6 +17,14 @@ export const Header: React.FC = () => {
   const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setPeriodFilter((prev) => ({ ...prev, month: Number(e.target.value) }));
   };
+
+  const handleToggleMenu = useCallback(() => {
+    if (!showResetMenu && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setDropdownTop(rect.bottom + 6);
+    }
+    setShowResetMenu((v) => !v);
+  }, [showResetMenu]);
 
   // Close reset menu on outside click
   useEffect(() => {
@@ -79,9 +89,10 @@ export const Header: React.FC = () => {
         {/* Reset Dropdown */}
         <div className="reset-dropdown-wrapper" ref={resetRef}>
           <button
+            ref={btnRef}
             className="btn-secondary"
             style={{ padding: '8px 10px', gap: '4px' }}
-            onClick={() => setShowResetMenu((v) => !v)}
+            onClick={handleToggleMenu}
             title="Opções de Reset de Dados"
           >
             <RefreshCw size={13} />
@@ -89,7 +100,7 @@ export const Header: React.FC = () => {
           </button>
 
           {showResetMenu && (
-            <div className="reset-dropdown-menu">
+            <div className="reset-dropdown-menu" style={{ top: dropdownTop }}>
               <button
                 className="reset-dropdown-item"
                 onClick={() => {

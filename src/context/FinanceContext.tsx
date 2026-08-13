@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type {
   Category,
   Subcategory,
@@ -101,42 +101,43 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       try {
         setLoading(true);
+
         // Fetch Categories
         const { data: dbCategories, error: catError } = await supabase
           .from('categories')
           .select('*, subcategories(*)');
 
-        // Se não há erro na query de categories, o banco está acessível
         if (!catError) {
           setSupabaseConnected(true);
-          if (dbCategories && dbCategories.length > 0) {
-            setCategories(dbCategories);
+          // Always replace local data with Supabase data when connected
+          // (including empty arrays — user may have cleared everything)
+          if (dbCategories !== null) {
+            if (dbCategories.length > 0) {
+              setCategories(dbCategories);
+            }
+            // If empty, keep defaults/local so app remains usable
           }
         }
 
-        // Fetch Transactions
+        // Fetch Transactions — always replace with Supabase truth
         const { data: dbTransactions, error: txError } = await supabase
           .from('transactions')
           .select('*')
           .order('date', { ascending: false });
 
         if (!txError && dbTransactions !== null) {
-          // Only replace mock data if Supabase returns transactions
-          if (dbTransactions.length > 0) {
-            setTransactions(dbTransactions);
-          }
+          // Replace local state with Supabase data (source of truth)
+          setTransactions(dbTransactions);
         }
 
-        // Fetch Scheduled
+        // Fetch Scheduled — always replace with Supabase truth
         const { data: dbScheduled, error: schError } = await supabase
           .from('scheduled_transactions')
           .select('*')
           .order('due_date', { ascending: true });
 
         if (!schError && dbScheduled !== null) {
-          if (dbScheduled.length > 0) {
-            setScheduledTransactions(dbScheduled);
-          }
+          setScheduledTransactions(dbScheduled);
         }
       } catch (err) {
         console.warn('Supabase connection error, fallback to LocalStorage:', err);
@@ -146,6 +147,65 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     loadFromSupabase();
+  }, []);
+
+  // Realtime subscriptions for cross-device sync
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const txChannel = supabase
+      .channel('realtime:transactions')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setTransactions((prev) => {
+              // Avoid duplicates (our own optimistic insert)
+              if (prev.find((t) => t.id === payload.new.id)) {
+                return prev.map((t) => t.id === payload.new.id ? { ...t, ...payload.new } as Transaction : t);
+              }
+              return [payload.new as Transaction, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setTransactions((prev) =>
+              prev.map((t) => t.id === payload.new.id ? { ...t, ...payload.new } as Transaction : t)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setTransactions((prev) => prev.filter((t) => t.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    const schChannel = supabase
+      .channel('realtime:scheduled_transactions')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'scheduled_transactions' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setScheduledTransactions((prev) => {
+              if (prev.find((s) => s.id === payload.new.id)) {
+                return prev.map((s) => s.id === payload.new.id ? { ...s, ...payload.new } as ScheduledTransaction : s);
+              }
+              return [...prev, payload.new as ScheduledTransaction];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setScheduledTransactions((prev) =>
+              prev.map((s) => s.id === payload.new.id ? { ...s, ...payload.new } as ScheduledTransaction : s)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setScheduledTransactions((prev) => prev.filter((s) => s.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(txChannel);
+      supabase.removeChannel(schChannel);
+    };
   }, []);
 
   // Filtered transactions based on periodFilter
@@ -202,19 +262,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [filteredTransactions, scheduledTransactions]);
 
   // --- CRUD TRANSACTIONS ---
-  const addTransaction = async (txData: Omit<Transaction, 'id' | 'created_at'>) => {
-    const newId = 'tx-' + Date.now();
-    const newTx: Transaction = {
-      ...txData,
-      id: newId,
-      created_at: new Date().toISOString(),
-    };
-
-    setTransactions((prev) => [newTx, ...prev]);
-
+  const addTransaction = useCallback(async (txData: Omit<Transaction, 'id' | 'created_at'>) => {
     if (supabaseConnected) {
       try {
-        const { error } = await supabase.from('transactions').insert([
+        const { data, error } = await supabase.from('transactions').insert([
           {
             description: txData.description,
             amount: txData.amount,
@@ -226,15 +277,34 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             is_paid: txData.is_paid,
             notes: txData.notes || null,
           },
-        ]);
-        if (error) console.error('Supabase transaction insert error:', error);
+        ]).select().single();
+
+        if (error) {
+          console.error('Supabase transaction insert error:', error);
+          // Fallback: insert locally with temp ID
+          const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
+          setTransactions((prev) => [newTx, ...prev]);
+        } else if (data) {
+          // Use real UUID from Supabase
+          setTransactions((prev) => {
+            // If realtime already added it, replace; otherwise prepend
+            if (prev.find((t) => t.id === data.id)) return prev;
+            return [data as Transaction, ...prev];
+          });
+        }
       } catch (err) {
         console.error('Supabase insert failed:', err);
+        const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
+        setTransactions((prev) => [newTx, ...prev]);
       }
+    } else {
+      // Offline: optimistic local insert
+      const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
+      setTransactions((prev) => [newTx, ...prev]);
     }
-  };
+  }, [supabaseConnected]);
 
-  const updateTransaction = async (id: string, updatedData: Partial<Transaction>) => {
+  const updateTransaction = useCallback(async (id: string, updatedData: Partial<Transaction>) => {
     setTransactions((prev) =>
       prev.map((tx) => (tx.id === id ? { ...tx, ...updatedData } : tx))
     );
@@ -246,9 +316,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Supabase update failed:', err);
       }
     }
-  };
+  }, [supabaseConnected]);
 
-  const deleteTransaction = async (id: string) => {
+  const deleteTransaction = useCallback(async (id: string) => {
     setTransactions((prev) => prev.filter((tx) => tx.id !== id));
 
     if (supabaseConnected) {
@@ -258,22 +328,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Supabase delete failed:', err);
       }
     }
-  };
+  }, [supabaseConnected]);
 
   // --- CRUD SCHEDULED TRANSACTIONS ---
-  const addScheduledTransaction = async (stxData: Omit<ScheduledTransaction, 'id' | 'created_at'>) => {
-    const newId = 'sch-' + Date.now();
-    const newStx: ScheduledTransaction = {
-      ...stxData,
-      id: newId,
-      created_at: new Date().toISOString(),
-    };
-
-    setScheduledTransactions((prev) => [...prev, newStx]);
-
+  const addScheduledTransaction = useCallback(async (stxData: Omit<ScheduledTransaction, 'id' | 'created_at'>) => {
     if (supabaseConnected) {
       try {
-        await supabase.from('scheduled_transactions').insert([
+        const { data, error } = await supabase.from('scheduled_transactions').insert([
           {
             description: stxData.description,
             amount: stxData.amount,
@@ -284,14 +345,30 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             subcategory_id: stxData.subcategory_id || null,
             is_active: stxData.is_active,
           },
-        ]);
+        ]).select().single();
+
+        if (error) {
+          console.error('Supabase scheduled insert error:', error);
+          const newStx: ScheduledTransaction = { ...stxData, id: 'sch-' + Date.now(), created_at: new Date().toISOString() };
+          setScheduledTransactions((prev) => [...prev, newStx]);
+        } else if (data) {
+          setScheduledTransactions((prev) => {
+            if (prev.find((s) => s.id === data.id)) return prev;
+            return [...prev, data as ScheduledTransaction];
+          });
+        }
       } catch (err) {
         console.error('Supabase scheduled insert failed:', err);
+        const newStx: ScheduledTransaction = { ...stxData, id: 'sch-' + Date.now(), created_at: new Date().toISOString() };
+        setScheduledTransactions((prev) => [...prev, newStx]);
       }
+    } else {
+      const newStx: ScheduledTransaction = { ...stxData, id: 'sch-' + Date.now(), created_at: new Date().toISOString() };
+      setScheduledTransactions((prev) => [...prev, newStx]);
     }
-  };
+  }, [supabaseConnected]);
 
-  const updateScheduledTransaction = async (id: string, stxData: Partial<ScheduledTransaction>) => {
+  const updateScheduledTransaction = useCallback(async (id: string, stxData: Partial<ScheduledTransaction>) => {
     setScheduledTransactions((prev) =>
       prev.map((stx) => (stx.id === id ? { ...stx, ...stxData } : stx))
     );
@@ -303,9 +380,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Supabase scheduled update failed:', err);
       }
     }
-  };
+  }, [supabaseConnected]);
 
-  const deleteScheduledTransaction = async (id: string) => {
+  const deleteScheduledTransaction = useCallback(async (id: string) => {
     setScheduledTransactions((prev) => prev.filter((stx) => stx.id !== id));
 
     if (supabaseConnected) {
@@ -315,10 +392,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Supabase scheduled delete failed:', err);
       }
     }
-  };
+  }, [supabaseConnected]);
 
-  const executeScheduledTransaction = async (stx: ScheduledTransaction) => {
-    // 1. Create real transaction
+  const executeScheduledTransaction = useCallback(async (stx: ScheduledTransaction) => {
+    // 1. Create real transaction (marked as paid)
     await addTransaction({
       description: stx.description,
       amount: stx.amount,
@@ -331,31 +408,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       notes: `Efetivado de agendamento (${stx.frequency})`,
     });
 
-    // 2. If 'once', mark inactive/delete; if recurring, advance due_date by 1 month
+    // 2. For 'once': DELETE the scheduled item so it disappears from Programados
+    //    For recurring: advance due_date by the appropriate period so it stays visible with next date
     if (stx.frequency === 'once') {
-      await updateScheduledTransaction(stx.id, { is_active: false });
+      await deleteScheduledTransaction(stx.id);
     } else if (stx.frequency === 'monthly') {
       const d = new Date(stx.due_date);
       d.setMonth(d.getMonth() + 1);
       const nextDueDate = d.toISOString().split('T')[0];
       await updateScheduledTransaction(stx.id, { due_date: nextDueDate });
+    } else if (stx.frequency === 'weekly') {
+      const d = new Date(stx.due_date);
+      d.setDate(d.getDate() + 7);
+      const nextDueDate = d.toISOString().split('T')[0];
+      await updateScheduledTransaction(stx.id, { due_date: nextDueDate });
+    } else if (stx.frequency === 'yearly') {
+      const d = new Date(stx.due_date);
+      d.setFullYear(d.getFullYear() + 1);
+      const nextDueDate = d.toISOString().split('T')[0];
+      await updateScheduledTransaction(stx.id, { due_date: nextDueDate });
     }
-  };
+  }, [addTransaction, deleteScheduledTransaction, updateScheduledTransaction]);
 
   // --- CRUD CATEGORIES ---
-  const addCategory = async (catData: Omit<Category, 'id' | 'created_at'>) => {
-    const newId = 'cat-' + Date.now();
-    const newCat: Category = {
-      ...catData,
-      id: newId,
-      subcategories: [],
-    };
-
-    setCategories((prev) => [...prev, newCat]);
-
+  const addCategory = useCallback(async (catData: Omit<Category, 'id' | 'created_at'>) => {
     if (supabaseConnected) {
       try {
-        await supabase.from('categories').insert([
+        const { data, error } = await supabase.from('categories').insert([
           {
             name: catData.name,
             type: catData.type,
@@ -363,14 +442,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             icon: catData.icon,
             max_budget: catData.max_budget || 0,
           },
-        ]);
+        ]).select().single();
+
+        if (error) {
+          console.error('Supabase category insert error:', error);
+          const newCat: Category = { ...catData, id: 'cat-' + Date.now(), subcategories: [] };
+          setCategories((prev) => [...prev, newCat]);
+        } else if (data) {
+          setCategories((prev) => [...prev, { ...data, subcategories: [] } as Category]);
+        }
       } catch (err) {
         console.error('Supabase category insert failed:', err);
+        const newCat: Category = { ...catData, id: 'cat-' + Date.now(), subcategories: [] };
+        setCategories((prev) => [...prev, newCat]);
       }
+    } else {
+      const newCat: Category = { ...catData, id: 'cat-' + Date.now(), subcategories: [] };
+      setCategories((prev) => [...prev, newCat]);
     }
-  };
+  }, [supabaseConnected]);
 
-  const updateCategory = async (id: string, catData: Partial<Category>) => {
+  const updateCategory = useCallback(async (id: string, catData: Partial<Category>) => {
     setCategories((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...catData } : c))
     );
@@ -382,9 +474,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Supabase category update failed:', err);
       }
     }
-  };
+  }, [supabaseConnected]);
 
-  const deleteCategory = async (id: string) => {
+  const deleteCategory = useCallback(async (id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
 
     if (supabaseConnected) {
@@ -394,44 +486,57 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Supabase category delete failed:', err);
       }
     }
-  };
+  }, [supabaseConnected]);
 
   // --- CRUD SUBCATEGORIES ---
-  const addSubcategory = async (categoryId: string, name: string) => {
-    const subId = 'sub-' + Date.now();
-    const newSub: Subcategory = {
-      id: subId,
-      category_id: categoryId,
-      name,
-    };
-
-    setCategories((prev) =>
-      prev.map((cat) => {
-        if (cat.id === categoryId) {
-          return {
-            ...cat,
-            subcategories: [...(cat.subcategories || []), newSub],
-          };
-        }
-        return cat;
-      })
-    );
-
+  const addSubcategory = useCallback(async (categoryId: string, name: string) => {
     if (supabaseConnected) {
       try {
-        await supabase.from('subcategories').insert([
-          {
-            category_id: categoryId,
-            name,
-          },
-        ]);
+        const { data, error } = await supabase.from('subcategories').insert([
+          { category_id: categoryId, name },
+        ]).select().single();
+
+        if (error) {
+          console.error('Supabase subcategory insert error:', error);
+          const subId = 'sub-' + Date.now();
+          const newSub: Subcategory = { id: subId, category_id: categoryId, name };
+          setCategories((prev) =>
+            prev.map((cat) => {
+              if (cat.id === categoryId) {
+                return { ...cat, subcategories: [...(cat.subcategories || []), newSub] };
+              }
+              return cat;
+            })
+          );
+        } else if (data) {
+          const newSub = data as Subcategory;
+          setCategories((prev) =>
+            prev.map((cat) => {
+              if (cat.id === categoryId) {
+                return { ...cat, subcategories: [...(cat.subcategories || []), newSub] };
+              }
+              return cat;
+            })
+          );
+        }
       } catch (err) {
         console.error('Supabase subcategory insert failed:', err);
       }
+    } else {
+      const subId = 'sub-' + Date.now();
+      const newSub: Subcategory = { id: subId, category_id: categoryId, name };
+      setCategories((prev) =>
+        prev.map((cat) => {
+          if (cat.id === categoryId) {
+            return { ...cat, subcategories: [...(cat.subcategories || []), newSub] };
+          }
+          return cat;
+        })
+      );
     }
-  };
+  }, [supabaseConnected]);
 
-  const deleteSubcategory = async (subId: string) => {
+  const deleteSubcategory = useCallback(async (subId: string) => {
     setCategories((prev) =>
       prev.map((cat) => ({
         ...cat,
@@ -446,7 +551,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Supabase subcategory delete failed:', err);
       }
     }
-  };
+  }, [supabaseConnected]);
 
   const resetToMockData = () => {
     setCategories(DEFAULT_CATEGORIES);

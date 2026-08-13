@@ -130,6 +130,7 @@ select option {
   max-width: 1400px;
   margin: 0 auto;
   padding: 16px 16px 80px 16px;
+  overflow-x: hidden;
 }
 
 @media (min-width: 768px) {
@@ -150,6 +151,8 @@ select option {
   border-radius: var(--radius-lg);
   flex-wrap: wrap;
   gap: 12px;
+  position: relative;
+  z-index: 10;
 }
 
 .brand-logo {
@@ -392,6 +395,17 @@ select option {
 @media (min-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Ensure chart cards have a sensible min-height on mobile */
+.dashboard-grid .glass-card {
+  min-height: 200px;
+}
+
+@media (min-width: 900px) {
+  .dashboard-grid .glass-card {
+    min-height: unset;
   }
 }
 
@@ -739,17 +753,27 @@ select option {
 }
 
 .reset-dropdown-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
+  position: fixed;
+  right: 16px;
+  top: auto;
   background: var(--bg-modal);
   border: 1px solid var(--border-highlight);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  z-index: 100;
+  z-index: 500;
   overflow: hidden;
   min-width: 240px;
+  max-width: calc(100vw - 32px);
   animation: modalSlide 0.18s ease;
+}
+
+@media (min-width: 640px) {
+  .reset-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    max-width: 280px;
+  }
 }
 
 .reset-dropdown-item {
