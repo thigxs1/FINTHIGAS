@@ -129,12 +129,38 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - [x] Corrigida detecção de `supabaseConnected` (via erro da query, não quantidade de dados)
 - [x] `resetToBlank()` adicionado ao contexto (limpa tudo sem seed)
 
+### Sessão 3 — Sync Cross-Device, Responsividade Mobile, Lógica Programados
+> Commit: `9b0cdf2` | Data: 2026-08-13
+
+#### 🔵 Persistência Cross-Device (`src/context/FinanceContext.tsx`)
+- **Bug raiz corrigido**: o código anterior gerava IDs temporários (`tx-1234567`) e descartava o UUID real do Supabase após insert. Agora usa `.select().single()` para capturar o UUID real e substituir o estado local → IDs sempre são UUIDs do Supabase
+- **Realtime subscriptions** adicionadas para `transactions` e `scheduled_transactions`: mudanças de qualquer dispositivo propagam automaticamente para os outros via `postgres_changes`
+- **Carga inicial**: removida condição `if (length > 0)` — Supabase agora é sempre a fonte de verdade ao conectar, mesmo quando retorna array vazio
+- Todas as funções CRUD convertidas para `useCallback` (evita re-renders desnecessários)
+- ⚠️ **Para Realtime funcionar**: habilitar em Supabase Dashboard → Database → Replication → Source → marcar `transactions` e `scheduled_transactions`
+
+#### 🟠 Responsividade Mobile
+- **`src/components/Header.tsx`**: dropdown de reset usa `position: fixed` com `z-index: 500` em mobile; posição vertical calculada dinamicamente via `getBoundingClientRect()` no botão → não sobrepõe mais os cards da página
+- **`src/components/Dashboard/ExpenseDonutChart.tsx`**: `ResizeObserver` detecta container < 520px; em mobile, legenda vai para **baixo** (não à direita, que causava corte de texto); texto "TOTAL GASTOS" exibido abaixo do gráfico em mobile (não mais com `left: 35%` fixo quebrado)
+- **`src/index.css`**: `.reset-dropdown-menu` usa `position: fixed` + `z-index: 500` em mobile, volta para `absolute` em ≥640px; `.app-container` recebe `overflow-x: hidden`; `.app-header` recebe `position: relative; z-index: 10`; `.dashboard-grid .glass-card` recebe `min-height: 200px` em mobile
+
+#### 🟡 Lógica da Aba "Programados" (`src/components/Scheduled/ScheduledView.tsx` + `FinanceContext.tsx`)
+- **Comportamento correto ao efetivar**:
+  - `once` → **deleta** o agendamento (some de Programados, aparece em Entradas/Saídas como Pago)
+  - `monthly` → avança `due_date` +1 mês (continua na lista com próxima data)
+  - `weekly` → avança `due_date` +7 dias
+  - `yearly` → avança `due_date` +1 ano
+- **View filtrada** para mostrar apenas `is_active: true`
+- **Badge de status dinâmico** por vencimento: 🔴 "Vencido há Xd" / 🟡 "Vence hoje/em Xd (≤7d)" / ⚫ "Vence em Xd"
+- Contador no topo: nº ativos, nº vencidos, soma das saídas a vencer
+- Confirmação de efetivação informa o que vai acontecer ("será removido" ou "data será avançada")
+
 ---
 
 ## 🔴 O que AINDA PRECISA ser feito / Pendências
 
-- [ ] **Executar o `supabase_schema.sql` no painel do Supabase** — Sem isso, o app opera em modo local
-- [ ] Autenticação de usuários (Supabase Auth) — Atualmente sem login; todos os dados são compartilhados
+- [ ] **Habilitar Realtime no Supabase** para `transactions` e `scheduled_transactions` (Dashboard → Database → Replication)
+- [ ] Autenticação de usuários (Supabase Auth) — Atualmente sem login; todos os devices compartilham os mesmos dados (single-tenant)
 - [ ] Paginação / infinite scroll na tabela de transações (quando houver muitos registros)
 - [ ] Exportação de dados (CSV/PDF)
 - [ ] Notificações de vencimento de contas programadas
@@ -154,6 +180,7 @@ npm run dev
 ```bash
 npm run build
 # A pasta dist/ gerada pode ser publicada em Vercel, Netlify, etc.
+# O Vercel detecta o push no GitHub e faz deploy automaticamente.
 ```
 
 ---
@@ -167,4 +194,4 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-10 — Sessão 2 (Ajustes de responsividade, tema e UX)_
+_Última atualização: 2026-08-13 — Sessão 3 (Sync cross-device, mobile responsiveness, lógica Programados)_
