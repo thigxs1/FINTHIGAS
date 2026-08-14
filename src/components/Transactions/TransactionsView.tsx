@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { Transaction, TransactionType } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText, ArrowUpDown } from 'lucide-react';
+
+type SortOption = 'date_desc' | 'date_asc' | 'abc' | 'created_at' | 'payment_date';
 import { TransactionModal } from '../Modals/TransactionModal';
 import { ReceiptViewerModal } from '../Modals/ReceiptViewerModal';
 
@@ -11,6 +13,7 @@ export const TransactionsView: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('date_desc');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('expense');
@@ -34,15 +37,31 @@ export const TransactionsView: React.FC = () => {
   };
 
   // Filter list by search and type
-  const displayedTransactions = filteredTransactions.filter((tx) => {
+  const filteredList = filteredTransactions.filter((tx) => {
     const matchesType = filterType === 'all' || tx.type === filterType;
     const cat = categories.find((c) => c.id === tx.category_id);
     const sub = cat?.subcategories?.find((s) => s.id === tx.subcategory_id);
-
     const text = `${tx.description} ${cat?.name || ''} ${sub?.name || ''} ${tx.payment_method || ''}`.toLowerCase();
     const matchesSearch = text.includes(searchTerm.toLowerCase());
-
     return matchesType && matchesSearch;
+  });
+
+  // Sort
+  const displayedTransactions = [...filteredList].sort((a, b) => {
+    switch (sortOption) {
+      case 'abc':
+        return a.description.localeCompare(b.description, 'pt-BR', { sensitivity: 'base' });
+      case 'date_asc':
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      case 'payment_date':
+        // date = data de pagamento informada
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      case 'created_at':
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      case 'date_desc':
+      default:
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+    }
   });
 
   return (
@@ -59,7 +78,7 @@ export const TransactionsView: React.FC = () => {
           }}
         >
           {/* Search Input */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '240px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '200px' }}>
             <Search size={18} color="var(--text-muted)" />
             <input
               type="text"
@@ -91,6 +110,30 @@ export const TransactionsView: React.FC = () => {
             >
               Saídas
             </button>
+          </div>
+
+          {/* Sort Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ArrowUpDown size={15} color="var(--text-muted)" />
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as SortOption)}
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                padding: '6px 10px',
+                fontSize: '0.83rem',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="date_desc">Mais Recente</option>
+              <option value="date_asc">Mais Antigo</option>
+              <option value="abc">A → Z (Descrição)</option>
+              <option value="payment_date">Data de Pagamento</option>
+              <option value="created_at">Data de Registro</option>
+            </select>
           </div>
 
           {/* New Transaction Buttons */}
