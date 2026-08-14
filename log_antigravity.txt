@@ -206,5 +206,5 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-13 — Sessão 4 (Fixes visuais mobile/desktop, ErrorBoundary, Upload de comprovantes em baixa de dívidas e transações)_
+_Última atualização: 2026-08-14 — Sessão 5 (Ordenação de transações, Persistência de aba ativa)_
 
