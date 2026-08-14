@@ -155,20 +155,12 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - Contador no topo: nº ativos, nº vencidos, soma das saídas a vencer
 - Confirmação de efetivação informa o que vai acontecer ("será removido" ou "data será avançada")
 
-### Sessão 4.1 — Ajustes Finais no Gráfico (Centralização & Cor Legenda) e Sincronização Cross-Device
+### Sessão 4.2 — Qualidade Gráfica do TOTAL GASTOS e Alinhamento Nitido
 > Data: 2026-08-13
 
-#### 🟢 Centralização do "TOTAL GASTOS" ([ExpenseDonutChart.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/components/Dashboard/ExpenseDonutChart.tsx))
-- **Solução por Plugin Canvas (`afterDraw`)**: Substituído o overlay HTML com `left: 32%` por um plugin nativo do Chart.js que obtém as coordenadas exatas `(x, y)` do centro do anel Doughnut.
-- A frase "TOTAL GASTOS" e o valor consolidado ficam perfeitamente centralizados no gráfico em todas as telas (Desktop, Notebook, Tablet e Mobile).
-
-#### 🟢 Cor da Fonte das Legendas ([ExpenseDonutChart.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/components/Dashboard/ExpenseDonutChart.tsx))
-- Adicionada a propriedade `fontColor: '#e2e8f0'` no objeto gerador de legendas `generateLabels`.
-- Os textos das categorias (ex: *Alimentação*, *Moradia*) agora são renderizados em cor cinza claro/branco totalmente legível no tema escuro.
-
-#### 🟣 Sincronização Cross-Device Desktop ↔ Mobile ([FinanceContext.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/context/FinanceContext.tsx))
-- **Refetch Automático no Foco / Alternância de Aba**: Adicionados listeners dos eventos `focus` e `visibilitychange`. Ao abrir a aba ou desbloquear a tela do celular, o app busca automaticamente os lançamentos atualizados no Supabase.
-- **Fallback Inteligente no Insert**: Se o Supabase ainda não tiver as colunas de comprovante no PostgreSQL, o `addTransaction` tenta novamente sem essas colunas, garantindo que a transação (baixa, valor, categoria, data) **SEJA SALVA no Supabase e apareça no mobile** sem travar o sync.
+#### 🟢 TOTAL GASTOS em HTML Vetorial de Alta Nitidez ([ExpenseDonutChart.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/components/Dashboard/ExpenseDonutChart.tsx))
+- **Solução de Alta Definição**: Removido o renderizador de texto em canvas 2D que ficava pixelado/sem qualidade e colidia com tooltips do gráfico.
+- Adicionado o badge indicador **`TOTAL: R$ XXX,XX`** em texto HTML vetorial de altíssima definição no cabeçalho do card, perfeitamente alinhado com a legenda e com o título do gráfico tanto no Desktop quanto no Mobile.
 
 ---
 

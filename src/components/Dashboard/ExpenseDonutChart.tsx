@@ -127,43 +127,37 @@ export const ExpenseDonutChart: React.FC = () => {
     cutout: '72%',
   };
 
-  // Canvas plugin to mathematically center "TOTAL GASTOS" inside the donut ring on desktop
-  const centerTextPlugin = {
-    id: 'centerText',
-    afterDraw(chart: any) {
-      if (isMobile) return;
-      const { ctx } = chart;
-      const meta = chart.getDatasetMeta(0);
-      if (!meta || !meta.data || !meta.data.length) return;
-
-      const x = meta.data[0].x;
-      const y = meta.data[0].y;
-
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      ctx.font = '600 11px Inter, sans-serif';
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillText('TOTAL GASTOS', x, y - 10);
-
-      ctx.font = 'bold 16px Outfit, sans-serif';
-      ctx.fillStyle = '#f43f5e';
-      ctx.fillText(formatCurrency(totalExpenseSum), x, y + 10);
-
-      ctx.restore();
-    },
-  };
-
-  // Chart height: taller on mobile because legend goes below
-  const chartHeight = isMobile ? 220 : 280;
+  // Chart height
+  const chartHeight = isMobile ? 240 : 280;
 
   return (
     <div className="glass-card" ref={containerRef} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="section-header">
-        <h3 className="section-title">
-          <span style={{ color: '#f43f5e' }}>●</span> Distribuição de Saídas (Gastos)
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <h3 className="section-title">
+            <span style={{ color: '#f43f5e' }}>●</span> Distribuição de Saídas
+          </h3>
+          {activeData.length > 0 && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(244, 63, 94, 0.12)',
+                border: '1px solid rgba(244, 63, 94, 0.3)',
+                padding: '3px 10px',
+                borderRadius: '16px',
+              }}
+            >
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.03em' }}>
+                TOTAL:
+              </span>
+              <strong style={{ fontSize: '0.92rem', color: '#f43f5e', fontFamily: 'var(--font-heading)' }}>
+                {formatCurrency(totalExpenseSum)}
+              </strong>
+            </div>
+          )}
+        </div>
 
         {/* Category vs Subcategory Toggle */}
         <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px' }}>
@@ -200,17 +194,7 @@ export const ExpenseDonutChart: React.FC = () => {
         </div>
       ) : (
         <div style={{ position: 'relative', height: `${chartHeight}px`, width: '100%', marginTop: '10px' }}>
-          <Doughnut data={chartData} options={chartOptions} plugins={[centerTextPlugin]} />
-        </div>
-      )}
-
-      {/* On mobile, show total below chart since center text doesn't fit well */}
-      {isMobile && activeData.length > 0 && (
-        <div style={{ textAlign: 'center', marginTop: '8px', paddingBottom: '4px' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>TOTAL GASTOS</span>
-          <div>
-            <strong style={{ fontSize: '1.1rem', color: '#f43f5e' }}>{formatCurrency(totalExpenseSum)}</strong>
-          </div>
+          <Doughnut data={chartData} options={chartOptions} />
         </div>
       )}
     </div>
