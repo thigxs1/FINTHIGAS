@@ -155,12 +155,13 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - Contador no topo: nº ativos, nº vencidos, soma das saídas a vencer
 - Confirmação de efetivação informa o que vai acontecer ("será removido" ou "data será avançada")
 
-### Sessão 4.2 — Qualidade Gráfica do TOTAL GASTOS e Alinhamento Nitido
+### Sessão 4.3 — Alinhamento e Centralização Perfeita em HTML Nítido
 > Data: 2026-08-13
 
-#### 🟢 TOTAL GASTOS em HTML Vetorial de Alta Nitidez ([ExpenseDonutChart.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/components/Dashboard/ExpenseDonutChart.tsx))
-- **Solução de Alta Definição**: Removido o renderizador de texto em canvas 2D que ficava pixelado/sem qualidade e colidia com tooltips do gráfico.
-- Adicionado o badge indicador **`TOTAL: R$ XXX,XX`** em texto HTML vetorial de altíssima definição no cabeçalho do card, perfeitamente alinhado com a legenda e com o título do gráfico tanto no Desktop quanto no Mobile.
+#### 🟢 Layout Flex de 2 Colunas com Overlay Centralizado Nítido ([ExpenseDonutChart.tsx](file:///d:/00_Arquivos_de_programas/finthigas/src/components/Dashboard/ExpenseDonutChart.tsx))
+- **Alinhamento e Centralização 100% Perfeitos**: O container do gráfico foi estruturado em 2 colunas flex (Container do Donut + Painel de Legenda).
+- Como o canvas da rosca ocupa 100% do seu próprio subcontainer (com a legenda separada no painel ao lado), o overlay HTML **`TOTAL GASTOS: R$ XXX,XX`** fica centralizado matematicamente no ponto `(50%, 50%)` do centro exato da rosca.
+- **Nitidez Vetorial em Alta Definição**: O texto é renderizado em HTML puro (Inter/Outfit 800 anti-aliased), eliminando qualquer desfoque de canvas, e as legendas ao lado exibem os valores em reais e porcentagens de cada categoria com fonte clara `#e2e8f0`.
 
 ---
 
