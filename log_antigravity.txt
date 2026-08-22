@@ -174,6 +174,8 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 #### 🟠 Notificações de Vencimento (App.tsx)
 - Inclusão de alerta visual (banner amarelo) nas abas caso existam contas programadas atrasadas ou que vencem na data de hoje.
 - O banner redireciona diretamente para a aba "Programados" ao clicar em "Ver Contas".
+- **Correção de Layout:** Removido o margin lateral excedente do banner para alinhar perfeitamente com os `glass-cards` do layout.
+- **Notificação Nativa:** Implementada requisição de permissão e envio de notificação nativa do sistema operacional (Browser/Windows) ao entrar no app com pendências.
 
 ---
 

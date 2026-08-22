@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FinanceProvider } from './context/FinanceContext';
 import { Header } from './components/Header';
 import { Navigation, type TabType } from './components/Navigation';
@@ -25,6 +25,7 @@ import { AlertTriangle, X } from 'lucide-react';
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab);
   const [hideNotification, setHideNotification] = useState(false);
+  const [notificationSent, setNotificationSent] = useState(false);
   const { scheduledTransactions } = useFinance();
 
   const handleSetActiveTab = (tab: TabType) => {
@@ -37,6 +38,28 @@ function AppContent() {
     (stx) => stx.is_active && stx.due_date <= todayStr
   );
 
+  useEffect(() => {
+    if (pendingScheduled.length > 0 && !hideNotification && !notificationSent) {
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          new Notification('Aviso - Finthigas', {
+            body: `Você tem ${pendingScheduled.length} conta(s) programada(s) vencendo hoje ou atrasada(s).`,
+          });
+          setNotificationSent(true);
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              new Notification('Aviso - Finthigas', {
+                body: `Você tem ${pendingScheduled.length} conta(s) programada(s) vencendo hoje ou atrasada(s).`,
+              });
+              setNotificationSent(true);
+            }
+          });
+        }
+      }
+    }
+  }, [pendingScheduled.length, hideNotification, notificationSent]);
+
   return (
     <div className="app-container">
       <Header />
@@ -46,12 +69,13 @@ function AppContent() {
         <div style={{
           background: 'rgba(245, 158, 11, 0.1)',
           borderLeft: '4px solid #f59e0b',
-          margin: '0 24px',
+          margin: '0 0 16px 0',
           padding: '12px 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderRadius: '4px'
+          borderRadius: '4px',
+          width: '100%'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fcd34d' }}>
             <AlertTriangle size={18} />
