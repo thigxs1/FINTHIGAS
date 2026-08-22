@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { Transaction, TransactionType } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText, ArrowUpDown, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type SortOption = 'date_desc' | 'date_asc' | 'abc' | 'created_at' | 'payment_date';
 import { TransactionModal } from '../Modals/TransactionModal';
@@ -18,6 +20,9 @@ export const TransactionsView: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('expense');
   const [viewingReceiptTx, setViewingReceiptTx] = useState<Transaction | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const handleOpenNew = (type: TransactionType) => {
     setEditingTransaction(null);
@@ -63,6 +68,70 @@ export const TransactionsView: React.FC = () => {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
     }
   });
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, sortOption]);
+
+  const totalPages = Math.ceil(displayedTransactions.length / pageSize) || 1;
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedTransactions = displayedTransactions.slice(
+    (validCurrentPage - 1) * pageSize,
+    validCurrentPage * pageSize
+  );
+
+  const handleExportCSV = () => {
+    if (displayedTransactions.length === 0) return;
+    const headers = ['Tipo', 'Descricao', 'Categoria', 'Subcategoria', 'Data', 'Pagamento', 'Valor', 'Status'];
+    const csvRows = [headers.join(',')];
+    displayedTransactions.forEach(tx => {
+      const cat = categories.find((c) => c.id === tx.category_id);
+      const sub = cat?.subcategories?.find((s) => s.id === tx.subcategory_id);
+      const tipo = tx.type === 'income' ? 'Entrada' : 'Saida';
+      const desc = `"${tx.description.replace(/"/g, '""')}"`;
+      const categoria = `"${cat?.name || 'Sem Categoria'}"`;
+      const subcategoria = `"${sub?.name || ''}"`;
+      const data = formatDate(tx.date);
+      const pagamento = `"${tx.payment_method || 'Pix'}"`;
+      const valor = tx.amount;
+      const status = tx.is_paid ? 'Pago' : 'Pendente';
+      csvRows.push([tipo, desc, categoria, subcategoria, data, pagamento, valor, status].join(','));
+    });
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transacoes_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    if (displayedTransactions.length === 0) return;
+    const doc = new jsPDF();
+    doc.text('Relatorio de Transacoes - Finthigas', 14, 15);
+    const tableData = displayedTransactions.map(tx => {
+      const cat = categories.find((c) => c.id === tx.category_id);
+      return [
+        tx.type === 'income' ? 'Entrada' : 'Saída',
+        tx.description,
+        cat?.name || '-',
+        formatDate(tx.date),
+        tx.payment_method || '-',
+        `${tx.type === 'income' ? '+' : '-'} ${formatCurrency(Number(tx.amount))}`
+      ];
+    });
+    autoTable(doc, {
+      startY: 20,
+      head: [['Tipo', 'Descrição', 'Categoria', 'Data', 'Pag.', 'Valor']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [15, 23, 42] }
+    });
+    doc.save(`transacoes_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -136,13 +205,19 @@ export const TransactionsView: React.FC = () => {
             </select>
           </div>
 
-          {/* New Transaction Buttons */}
-          <div style={{ display: 'flex', gap: '10px' }}>
+          {/* New Transaction Buttons & Export */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button className="btn-secondary" style={{ padding: '8px 12px', gap: '6px' }} onClick={handleExportCSV} title="Exportar CSV">
+              <Download size={16} /> <span className="hide-mobile">CSV</span>
+            </button>
+            <button className="btn-secondary" style={{ padding: '8px 12px', gap: '6px' }} onClick={handleExportPDF} title="Exportar PDF">
+              <Download size={16} /> <span className="hide-mobile">PDF</span>
+            </button>
             <button className="btn-primary" style={{ background: '#10b981' }} onClick={() => handleOpenNew('income')}>
-              <Plus size={16} /> Nova Entrada
+              <Plus size={16} /> <span className="hide-mobile">Nova Entrada</span>
             </button>
             <button className="btn-primary" style={{ background: '#f43f5e' }} onClick={() => handleOpenNew('expense')}>
-              <Plus size={16} /> Nova Saída
+              <Plus size={16} /> <span className="hide-mobile">Nova Saída</span>
             </button>
           </div>
         </div>
@@ -163,14 +238,14 @@ export const TransactionsView: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {displayedTransactions.length === 0 ? (
+            {paginatedTransactions.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   Nenhum lançamento encontrado para os filtros selecionados.
                 </td>
               </tr>
             ) : (
-              displayedTransactions.map((tx) => {
+              paginatedTransactions.map((tx) => {
                 const cat = categories.find((c) => c.id === tx.category_id);
                 const sub = cat?.subcategories?.find((s) => s.id === tx.subcategory_id);
 
@@ -239,6 +314,31 @@ export const TransactionsView: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '10px' }}>
+          <button
+            className="btn-secondary"
+            disabled={validCurrentPage === 1}
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            style={{ padding: '8px' }}
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            Página {validCurrentPage} de {totalPages}
+          </span>
+          <button
+            className="btn-secondary"
+            disabled={validCurrentPage === totalPages}
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            style={{ padding: '8px' }}
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
 
       <TransactionModal
         isOpen={isModalOpen}

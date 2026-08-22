@@ -163,20 +163,29 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - Como o canvas da rosca ocupa 100% do seu próprio subcontainer (com a legenda separada no painel ao lado), o overlay HTML **`TOTAL GASTOS: R$ XXX,XX`** fica centralizado matematicamente no ponto `(50%, 50%)` do centro exato da rosca.
 - **Nitidez Vetorial em Alta Definição**: O texto é renderizado em HTML puro (Inter/Outfit 800 anti-aliased), eliminando qualquer desfoque de canvas, e as legendas ao lado exibem os valores em reais e porcentagens de cada categoria com fonte clara `#e2e8f0`.
 
+### Sessão 6 — Melhorias: Paginação, Exportação e Notificações (Antigravity)
+> Data: 2026-08-22
+
+#### 🔵 Exportação e Paginação (TransactionsView.tsx)
+- Adicionada paginação no cliente (Client-Side) limitando a exibição a 15 itens por página.
+- Adicionados botões de navegação (Página Anterior e Próxima).
+- Exportação de tabela de transações implementada para CSV e PDF (utilizando as libs `jspdf` e `jspdf-autotable`).
+
+#### 🟠 Notificações de Vencimento (App.tsx)
+- Inclusão de alerta visual (banner amarelo) nas abas caso existam contas programadas atrasadas ou que vencem na data de hoje.
+- O banner redireciona diretamente para a aba "Programados" ao clicar em "Ver Contas".
+
 ---
 
 ## 🔴 O que AINDA PRECISA ser feito / Pendências
 
 - [ ] **Habilitar Realtime no Supabase** para `transactions` e `scheduled_transactions` (Dashboard → Database → Replication)
-- [ ] Executar o `ALTER TABLE` no SQL Editor do Supabase se o projeto já tiver sido criado anteriormente:
+- [ ] ⚠️ **IMPORTANTE**: Executar o `ALTER TABLE` no SQL Editor do Supabase se o projeto já tiver sido criado anteriormente (Necessário para a visualização de recibos funcionar!):
   ```sql
   ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_url TEXT;
   ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_name TEXT;
   ```
 - [ ] Autenticação de usuários (Supabase Auth) — Atualmente sem login; todos os devices compartilham os mesmos dados (single-tenant)
-- [ ] Paginação / infinite scroll na tabela de transações (quando houver muitos registros)
-- [ ] Exportação de dados (CSV/PDF)
-- [ ] Notificações de vencimento de contas programadas
 
 ---
 
@@ -206,5 +215,5 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-14 — Sessão 5 (Ordenação de transações, Persistência de aba ativa)_
+_Última atualização: 2026-08-22 — Sessão 6 (Paginação, Exportação de CSV/PDF e Notificações de Vencimento)_
 

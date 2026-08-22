@@ -19,18 +19,60 @@ function getInitialTab(): TabType {
   return 'dashboard';
 }
 
+import { useFinance } from './context/FinanceContext';
+import { AlertTriangle, X } from 'lucide-react';
+
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab);
+  const [hideNotification, setHideNotification] = useState(false);
+  const { scheduledTransactions } = useFinance();
 
   const handleSetActiveTab = (tab: TabType) => {
     setActiveTab(tab);
     try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch {}
   };
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const pendingScheduled = scheduledTransactions.filter(
+    (stx) => stx.is_active && stx.due_date <= todayStr
+  );
+
   return (
     <div className="app-container">
       <Header />
       <Navigation activeTab={activeTab} setActiveTab={handleSetActiveTab} />
+      
+      {!hideNotification && pendingScheduled.length > 0 && (
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.1)',
+          borderLeft: '4px solid #f59e0b',
+          margin: '0 24px',
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderRadius: '4px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fcd34d' }}>
+            <AlertTriangle size={18} />
+            <span>
+              Você tem <strong>{pendingScheduled.length}</strong> conta(s) programada(s) vencendo hoje ou atrasada(s).
+              <button 
+                onClick={() => handleSetActiveTab('scheduled')}
+                style={{ background: 'none', border: 'none', color: '#fcd34d', textDecoration: 'underline', marginLeft: '8px', cursor: 'pointer', padding: 0 }}
+              >
+                Ver Contas
+              </button>
+            </span>
+          </div>
+          <button 
+            onClick={() => setHideNotification(true)}
+            style={{ background: 'none', border: 'none', color: '#fcd34d', cursor: 'pointer' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <main>
         {activeTab === 'dashboard' && <DashboardView />}
