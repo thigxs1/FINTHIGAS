@@ -34,7 +34,14 @@ interface FinanceContextType {
   deleteScheduledTransaction: (id: string) => Promise<void>;
   executeScheduledTransaction: (
     stx: ScheduledTransaction,
-    details?: { payment_method?: string; notes?: string; receipt_url?: string; receipt_name?: string; date?: string }
+    details?: {
+      amount?: number;
+      payment_method?: string;
+      notes?: string;
+      receipt_url?: string;
+      receipt_name?: string;
+      date?: string;
+    }
   ) => Promise<void>;
   
   // Category CRUD
@@ -446,12 +453,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const executeScheduledTransaction = useCallback(async (
     stx: ScheduledTransaction,
-    details?: { payment_method?: string; notes?: string; receipt_url?: string; receipt_name?: string; date?: string }
+    details?: {
+      amount?: number;
+      payment_method?: string;
+      notes?: string;
+      receipt_url?: string;
+      receipt_name?: string;
+      date?: string;
+    }
   ) => {
+    const finalAmount = details?.amount !== undefined ? details.amount : Number(stx.amount);
+
     // 1. Create real transaction (marked as paid)
     await addTransaction({
       description: stx.description,
-      amount: stx.amount,
+      amount: finalAmount,
       type: stx.type,
       date: details?.date || new Date().toISOString().split('T')[0],
       category_id: stx.category_id,

@@ -177,6 +177,16 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - **Correção de Layout:** Removido o margin lateral excedente do banner para alinhar perfeitamente com os `glass-cards` do layout.
 - **Notificação Nativa:** Implementada requisição de permissão e envio de notificação nativa do sistema operacional (Browser/Windows) ao entrar no app com pendências.
 
+### Sessão 7 — Multa e Juros por Atraso em Baixas Programadas (Antigravity)
+> Data: 2026-08-27
+
+#### 🟢 Multa e Juros por Atraso (`ExecuteScheduledModal.tsx` + `FinanceContext.tsx`)
+- **Detecção de Atraso**: Ao abrir o modal de baixa de um lançamento agendado com data posterior ao vencimento (`date > scheduled.due_date`), um alerta âmbar avisa a quantidade exata de dias em atraso.
+- **Campos Dedicados**: Adicionados inputs para "Multa por Atraso (R$)" e "Juros / Encargos (R$)".
+- **Cálculo em Tempo Real**: O modal exibe um quadro com o somatório: `(Valor Original + Multa + Juros) = Valor Total da Baixa`.
+- **Efetivação Flexível**: `executeScheduledTransaction` atualizado para receber o `amount` final calculado e registrar o valor real pago no histórico e fluxo de caixa, além de incluir o detalhamento discriminado nas observações da transação.
+- **Recorrências Preservadas**: Em agendamentos recorrentes (mensal, semanal, anual), o valor-base original do agendamento é mantido intacto para o próximo ciclo de vencimento.
+
 ---
 
 ## 🔴 O que AINDA PRECISA ser feito / Pendências
@@ -217,5 +227,5 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-22 — Sessão 6 (Paginação, Exportação de CSV/PDF e Notificações de Vencimento)_
+_Última atualização: 2026-08-27 — Sessão 7 (Multa e Juros por Atraso em Baixas Programadas)_
 

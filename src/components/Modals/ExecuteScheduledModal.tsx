@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { ScheduledTransaction } from '../../types';
-import { formatCurrency } from '../../utils/formatters';
-import { X, CheckCircle, Upload } from 'lucide-react';
+import { formatCurrency, formatDate } from '../../utils/formatters';
+import { X, CheckCircle, Upload, AlertTriangle, Calculator, DollarSign } from 'lucide-react';
 
 interface ExecuteScheduledModalProps {
   scheduled: ScheduledTransaction | null;
@@ -14,6 +14,8 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('Pix');
+  const [penalty, setPenalty] = useState('');
+  const [interest, setInterest] = useState('');
   const [notes, setNotes] = useState('');
   const [receiptUrl, setReceiptUrl] = useState<string | undefined>(undefined);
   const [receiptName, setReceiptName] = useState<string | undefined>(undefined);
@@ -22,6 +24,8 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
     if (scheduled) {
       setDate(new Date().toISOString().split('T')[0]);
       setPaymentMethod('Pix');
+      setPenalty('');
+      setInterest('');
       setNotes(`Baixa de agendamento (${scheduled.frequency})`);
       setReceiptUrl(undefined);
       setReceiptName(undefined);
@@ -29,6 +33,18 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
   }, [scheduled]);
 
   if (!scheduled) return null;
+
+  // Calculate delay in days
+  const dueDate = new Date(scheduled.due_date + 'T00:00:00');
+  const paymentDate = new Date(date + 'T00:00:00');
+  const diffDays = Math.round((paymentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+  const isDelayed = diffDays > 0;
+
+  // Calculate totals
+  const originalAmount = Number(scheduled.amount) || 0;
+  const penaltyAmount = Number(penalty) > 0 ? Number(penalty) : 0;
+  const interestAmount = Number(interest) > 0 ? Number(interest) : 0;
+  const totalAmount = originalAmount + penaltyAmount + interestAmount;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,10 +71,22 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    let finalNotes = notes.trim();
+    if (penaltyAmount > 0 || interestAmount > 0) {
+      const extraParts: string[] = [];
+      if (penaltyAmount > 0) extraParts.push(`Multa: ${formatCurrency(penaltyAmount)}`);
+      if (interestAmount > 0) extraParts.push(`Juros: ${formatCurrency(interestAmount)}`);
+      const extraStr = `[Original: ${formatCurrency(originalAmount)}, ${extraParts.join(', ')}]`;
+      if (!finalNotes.includes('Multa:') && !finalNotes.includes('Juros:')) {
+        finalNotes = finalNotes ? `${finalNotes} ${extraStr}` : extraStr;
+      }
+    }
+
     await executeScheduledTransaction(scheduled, {
+      amount: totalAmount,
       date,
       payment_method: paymentMethod,
-      notes,
+      notes: finalNotes,
       receipt_url: receiptUrl,
       receipt_name: receiptName,
     });
@@ -72,7 +100,7 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CheckCircle size={20} color="#10b981" />
-            <h3 style={{ margin: 0 }}>Efetivar / Baixa de Dívida</h3>
+            <h3 style={{ margin: 0 }}>Efetivar / Baixa de Lançamento</h3>
           </div>
           <button className="btn-secondary" style={{ padding: '6px' }} onClick={onClose}>
             <X size={18} />
@@ -81,7 +109,7 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            {/* Description & Value Info Box */}
+            {/* Description & Base Value Info Box */}
             <div
               style={{
                 background: 'rgba(16, 185, 129, 0.08)',
@@ -100,11 +128,40 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
                     ? 'Agendamento único (será removido após a baixa)'
                     : `Recorrência ${scheduled.frequency} (avançará para o próximo vencimento)`}
                 </span>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Vencimento original: <strong>{formatDate(scheduled.due_date)}</strong>
+                </div>
               </div>
-              <strong style={{ fontSize: '1.2rem', color: scheduled.type === 'income' ? '#10b981' : '#f43f5e' }}>
-                {formatCurrency(Number(scheduled.amount))}
-              </strong>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Valor Original</span>
+                <strong style={{ fontSize: '1.15rem', color: scheduled.type === 'income' ? '#10b981' : '#f43f5e' }}>
+                  {formatCurrency(originalAmount)}
+                </strong>
+              </div>
             </div>
+
+            {/* Overdue Alert Banner if delayed */}
+            {isDelayed && (
+              <div
+                style={{
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderLeft: '4px solid #f59e0b',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.82rem',
+                  color: '#fcd34d',
+                }}
+              >
+                <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                <span>
+                  Pagamento com <strong>{diffDays} dia(s)</strong> de atraso em relação ao vencimento original ({formatDate(scheduled.due_date)}). Você pode informar multa e juros abaixo.
+                </span>
+              </div>
+            )}
 
             {/* Date & Payment Method */}
             <div className="form-row">
@@ -123,6 +180,82 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
                   <option value="Dinheiro">Dinheiro</option>
                   <option value="Transferência">Transferência / TED</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Fines and Interests by Delay */}
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <DollarSign size={15} color="var(--accent-warning)" />
+                <span>Multa &amp; Juros por Atraso (Opcional)</span>
+              </div>
+
+              <div className="form-row" style={{ margin: 0 }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.8rem' }}>Multa por Atraso (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={penalty}
+                    onChange={(e) => setPenalty(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label style={{ fontSize: '0.8rem' }}>Juros / Encargos (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={interest}
+                    onChange={(e) => setInterest(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Total Calculation breakdown */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderTop: '1px dashed rgba(255, 255, 255, 0.1)',
+                  paddingTop: '8px',
+                  fontSize: '0.85rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-muted)' }}>
+                  <Calculator size={14} />
+                  <span>Valor Total da Baixa:</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  {(penaltyAmount > 0 || interestAmount > 0) && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginRight: '6px' }}>
+                      ({formatCurrency(originalAmount)} + {formatCurrency(penaltyAmount + interestAmount)}) =
+                    </span>
+                  )}
+                  <strong
+                    style={{
+                      fontSize: '1.05rem',
+                      color: scheduled.type === 'income' ? '#10b981' : '#f43f5e',
+                    }}
+                  >
+                    {formatCurrency(totalAmount)}
+                  </strong>
+                </div>
               </div>
             </div>
 
@@ -196,7 +329,7 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
               Cancelar
             </button>
             <button type="submit" className="btn-primary" style={{ background: '#10b981' }}>
-              <CheckCircle size={16} /> Confirmar Baixa
+              <CheckCircle size={16} /> Confirmar Baixa ({formatCurrency(totalAmount)})
             </button>
           </div>
         </form>
@@ -204,3 +337,4 @@ export const ExecuteScheduledModal: React.FC<ExecuteScheduledModalProps> = ({ sc
     </div>
   );
 };
+
