@@ -211,21 +211,22 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 #### 🔵 Gate de Autenticação (`src/App.tsx`)
 - `AuthGate`: componente que exibe spinner de carregamento, `AuthView` (não logado) ou o app principal (`FinanceProvider > AppContent`) conforme estado da sessão.
 
-#### ⚠️ AÇÃO MANUAL NECESSÁRIA NO SUPABASE
-Execute o `supabase_schema.sql` atualizado no SQL Editor do painel do Supabase para:
-- Adicionar `user_id` nas tabelas existentes.
-- Ativar políticas RLS corretas (multiusuário).
-- Criar a trigger de categorias padrão no cadastro.
+### Sessão 9 — Autenticação Social com Google OAuth (Antigravity)
+> Data: 2026-08-27
 
+#### 🔴 Google OAuth (`src/context/AuthContext.tsx` + `src/components/Auth/AuthView.tsx`)
+- Adicionada a função `signInWithGoogle()` no `AuthContext` via `supabase.auth.signInWithOAuth({ provider: 'google' })`.
+- Botões oficiais estilizados **"Continuar com Google"** e **"Cadastrar com Google"** adicionados com o ícone oficial multicolorido e separador elegante nas abas de Login e Cadastro do `AuthView`.
+- Redirecionamento configurado automaticamente para o `origin` da aplicação.
+- Criação e vínculo automático de categorias padrão via Trigger no primeiro login do usuário via Google.
 
+---
 
-- [ ] **Habilitar Realtime no Supabase** para `transactions` e `scheduled_transactions` (Dashboard → Database → Replication)
-- [ ] ⚠️ **IMPORTANTE**: Executar o `ALTER TABLE` no SQL Editor do Supabase se o projeto já tiver sido criado anteriormente (Necessário para a visualização de recibos funcionar!):
-  ```sql
-  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_url TEXT;
-  ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_name TEXT;
-  ```
-- [ ] Autenticação de usuários (Supabase Auth) — Atualmente sem login; todos os devices compartilham os mesmos dados (single-tenant)
+## 🔴 O que AINDA PRECISA ser feito / Pendências
+
+- [ ] **Habilitar Google OAuth no Supabase**: Configurar Client ID e Client Secret em Supabase → Authentication → Providers → Google.
+- [ ] **Habilitar Realtime no Supabase** para `transactions` e `scheduled_transactions` (Dashboard → Database → Replication).
+- [ ] ⚠️ **IMPORTANTE**: Executar o `supabase_schema.sql` no SQL Editor do Supabase para ativar o RLS e o Trigger de criação de categorias.
 
 ---
 
