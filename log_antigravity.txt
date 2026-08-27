@@ -220,6 +220,15 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - Redirecionamento configurado automaticamente para o `origin` da aplicação.
 - Criação e vínculo automático de categorias padrão via Trigger no primeiro login do usuário via Google.
 
+### Sessão 10 — Suporte Completo a PWA & Atalho Mobile/Desktop (Antigravity)
+> Data: 2026-08-27
+
+#### 📱 Progressive Web App (PWA)
+- **Manifesto Web (`public/manifest.webmanifest`)**: Configurado com nome completo, nome curto, tema dark `#7c3aed`, modo `standalone` (sem barra de URL do navegador) e ícones responsivos.
+- **Ícone Vetorial Exclusivo (`public/pwa-icon.svg`)**: Ícone em alta resolução com design de carteira financeira e gradiente roxo/índigo.
+- **Service Worker (`public/sw.js` + `src/main.tsx`)**: Registro automático do Service Worker para cache inteligente de assets estáticos, suporte offline e gerenciamento de cliques em notificações.
+- **Compatibilidade com iOS & Android (`index.html`)**: Meta tags para Safari iOS (`apple-mobile-web-app-capable`, `apple-touch-icon`, `theme-color`) permitindo instalação direta na tela de início de iPhones e Androids como aplicativo nativo.
+
 ---
 
 ## 🔴 O que AINDA PRECISA ser feito / Pendências
@@ -256,5 +265,6 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-27 — Sessão 7 (Multa e Juros por Atraso em Baixas Programadas)_
+_Última atualização: 2026-08-27 — Sessão 10 (Suporte Completo a PWA & Atalho Mobile/Desktop)_
+
 
