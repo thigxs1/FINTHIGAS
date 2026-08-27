@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
 import { FinanceProvider } from './context/FinanceContext';
 import { Header } from './components/Header';
 import { Navigation, type TabType } from './components/Navigation';
@@ -7,6 +9,9 @@ import { TransactionsView } from './components/Transactions/TransactionsView';
 import { ScheduledView } from './components/Scheduled/ScheduledView';
 import { CategoriesView } from './components/Categories/CategoriesView';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AuthView } from './components/Auth/AuthView';
+import { AlertTriangle, X, Loader2 } from 'lucide-react';
+import { useFinance } from './context/FinanceContext';
 
 const VALID_TABS: TabType[] = ['dashboard', 'transactions', 'scheduled', 'categories'];
 const TAB_STORAGE_KEY = 'finthigas_active_tab';
@@ -18,9 +23,6 @@ function getInitialTab(): TabType {
   } catch {}
   return 'dashboard';
 }
-
-import { useFinance } from './context/FinanceContext';
-import { AlertTriangle, X } from 'lucide-react';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab);
@@ -108,13 +110,44 @@ function AppContent() {
   );
 }
 
-export default function App() {
+// Gate: shows loading spinner, AuthView or the main app based on auth state
+function AuthGate() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: '12px',
+        color: 'var(--text-muted)',
+      }}>
+        <Loader2 size={32} className="spin" style={{ color: '#7c3aed' }} />
+        <span style={{ fontSize: '0.9rem' }}>Carregando...</span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthView />;
+  }
+
   return (
-    <ErrorBoundary>
-      <FinanceProvider>
-        <AppContent />
-      </FinanceProvider>
-    </ErrorBoundary>
+    <FinanceProvider>
+      <AppContent />
+    </FinanceProvider>
   );
 }
 
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <AuthGate />
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+}

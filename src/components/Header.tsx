@@ -1,14 +1,22 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFinance } from '../context/FinanceContext';
-import { Wallet, ChevronDown, Database, CheckCircle2, AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Wallet, ChevronDown, Database, CheckCircle2, AlertTriangle, RefreshCw, Trash2, LogOut, User } from 'lucide-react';
 import { getMonthName } from '../utils/formatters';
 
 export const Header: React.FC = () => {
   const { periodFilter, setPeriodFilter, supabaseConnected, resetToMockData, resetToBlank } = useFinance();
+  const { user, signOut } = useAuth();
   const [showResetMenu, setShowResetMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const resetRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [dropdownTop, setDropdownTop] = useState(0);
+
+  const userInitials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+    : user?.email?.slice(0, 2).toUpperCase() ?? '?';
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setPeriodFilter((prev) => ({ ...prev, year: Number(e.target.value) }));
@@ -26,12 +34,11 @@ export const Header: React.FC = () => {
     setShowResetMenu((v) => !v);
   }, [showResetMenu]);
 
-  // Close reset menu on outside click
+  // Close menus on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (resetRef.current && !resetRef.current.contains(e.target as Node)) {
-        setShowResetMenu(false);
-      }
+      if (resetRef.current && !resetRef.current.contains(e.target as Node)) setShowResetMenu(false);
+      if (userRef.current && !userRef.current.contains(e.target as Node)) setShowUserMenu(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -131,6 +138,74 @@ export const Header: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* User Avatar & Logout */}
+        {user && (
+          <div ref={userRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowUserMenu(v => !v)}
+              title={user.email}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(124, 58, 237, 0.15)',
+                border: '1px solid rgba(124, 58, 237, 0.35)',
+                borderRadius: '20px',
+                padding: '5px 10px 5px 5px',
+                cursor: 'pointer',
+                color: '#c4b5fd',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{
+                width: '26px', height: '26px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.7rem', fontWeight: 800, color: 'white', flexShrink: 0,
+              }}>
+                {userInitials}
+              </div>
+              <span style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.user_metadata?.full_name || user.email?.split('@')[0]}
+              </span>
+              <ChevronDown size={12} />
+            </button>
+
+            {showUserMenu && (
+              <div className="reset-dropdown-menu" style={{ top: 44, right: 0, left: 'auto', minWidth: '200px' }}>
+                <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <User size={14} color="var(--text-muted)" />
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                        {user.user_metadata?.full_name || 'Usuário'}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>
+                        {user.email}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  className="reset-dropdown-item"
+                  onClick={async () => {
+                    setShowUserMenu(false);
+                    if (confirm('Deseja sair da sua conta?')) await signOut();
+                  }}
+                  style={{ color: '#f43f5e' }}
+                >
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f43f5e' }}>
+                    <LogOut size={13} /> Sair da Conta
+                  </strong>
+                  <small style={{ color: 'var(--text-muted)' }}>Encerrar sessão atual</small>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

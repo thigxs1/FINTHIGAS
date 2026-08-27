@@ -187,9 +187,37 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - **Efetivação Flexível**: `executeScheduledTransaction` atualizado para receber o `amount` final calculado e registrar o valor real pago no histórico e fluxo de caixa, além de incluir o detalhamento discriminado nas observações da transação.
 - **Recorrências Preservadas**: Em agendamentos recorrentes (mensal, semanal, anual), o valor-base original do agendamento é mantido intacto para o próximo ciclo de vencimento.
 
----
+### Sessão 8 — Arquitetura SaaS Multiusuário com Supabase Auth & RLS (Antigravity)
+> Data: 2026-08-27
 
-## 🔴 O que AINDA PRECISA ser feito / Pendências
+#### 🟣 Autenticação e Contexto (`src/context/AuthContext.tsx`) [NOVO]
+- Criado `AuthProvider` com gerenciamento de sessão via `supabase.auth.onAuthStateChange`.
+- Expõe: `user`, `session`, `loading`, `signIn`, `signUp`, `signOut`, `resetPassword`.
+- Tradução automática das mensagens de erro da Supabase Auth para o português.
+
+#### 🟣 Tela de Autenticação (`src/components/Auth/AuthView.tsx`) [NOVO]
+- Interface premium com design Glassmorphism, dark theme e animações.
+- 3 abas: **Entrar**, **Criar Conta** e **Recuperar Senha**.
+- Campos com ícones, toggle de visibilidade de senha e feedback de erro/sucesso.
+
+#### 🔵 Isolamento de Dados por Usuário
+- **`supabase_schema.sql`**: Atualizado com coluna `user_id` em todas as tabelas (`categories`, `subcategories`, `transactions`, `scheduled_transactions`), políticas RLS que isolam dados por `auth.uid()` e Trigger `on_auth_user_created` que cria automaticamente as categorias padrão ao cadastrar novo usuário.
+- **`src/context/FinanceContext.tsx`**: Integrado com `useAuth()`. Todos os inserts agora incluem `user_id`. Estado resetado ao deslogar. `localStorage` com namespace por `user_id` para multi-conta no mesmo device. Dados só são carregados do Supabase quando há usuário autenticado.
+
+#### 🔵 Avatar e Logout no Header (`src/components/Header.tsx`)
+- Exibe avatar com iniciais do usuário e nome/email no canto superior direito.
+- Dropdown de perfil com botão "Sair da Conta".
+
+#### 🔵 Gate de Autenticação (`src/App.tsx`)
+- `AuthGate`: componente que exibe spinner de carregamento, `AuthView` (não logado) ou o app principal (`FinanceProvider > AppContent`) conforme estado da sessão.
+
+#### ⚠️ AÇÃO MANUAL NECESSÁRIA NO SUPABASE
+Execute o `supabase_schema.sql` atualizado no SQL Editor do painel do Supabase para:
+- Adicionar `user_id` nas tabelas existentes.
+- Ativar políticas RLS corretas (multiusuário).
+- Criar a trigger de categorias padrão no cadastro.
+
+
 
 - [ ] **Habilitar Realtime no Supabase** para `transactions` e `scheduled_transactions` (Dashboard → Database → Replication)
 - [ ] ⚠️ **IMPORTANTE**: Executar o `ALTER TABLE` no SQL Editor do Supabase se o projeto já tiver sido criado anteriormente (Necessário para a visualização de recibos funcionar!):

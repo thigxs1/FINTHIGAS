@@ -10,6 +10,7 @@ import type {
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { DEFAULT_CATEGORIES } from '../utils/defaultCategories';
 import { MOCK_TRANSACTIONS, MOCK_SCHEDULED } from '../utils/mockData';
+import { useAuth } from './AuthContext';
 
 interface FinanceContextType {
   categories: Category[];
@@ -60,9 +61,14 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_PREFIX = 'finthigas_';
+const BASE_LS_PREFIX = 'finthigas_';
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  // Namespace localStorage by user so different accounts on same device don't share data
+  const LOCAL_STORAGE_PREFIX = userId ? `${BASE_LS_PREFIX}${userId}_` : BASE_LS_PREFIX;
+
   const currentDate = new Date();
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
     year: currentDate.getFullYear(),
@@ -70,49 +76,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     type: 'all',
   });
 
-  const [categories, setCategories] = useState<Category[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'categories');
-      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
-    } catch {
-      return DEFAULT_CATEGORIES;
-    }
-  });
-
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'transactions');
-      return saved ? JSON.parse(saved) : MOCK_TRANSACTIONS;
-    } catch {
-      return MOCK_TRANSACTIONS;
-    }
-  });
-
-  const [scheduledTransactions, setScheduledTransactions] = useState<ScheduledTransaction[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_PREFIX + 'scheduled');
-      return saved ? JSON.parse(saved) : MOCK_SCHEDULED;
-    } catch {
-      return MOCK_SCHEDULED;
-    }
-  });
-
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [scheduledTransactions, setScheduledTransactions] = useState<ScheduledTransaction[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [supabaseConnected, setSupabaseConnected] = useState<boolean>(false);
 
+  // Clear state when user logs out
+  useEffect(() => {
+    if (!userId) {
+      setCategories(DEFAULT_CATEGORIES);
+      setTransactions([]);
+      setScheduledTransactions([]);
+      setSupabaseConnected(false);
+    }
+  }, [userId]);
+
   // Save to LocalStorage whenever state changes (as backup / offline support)
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_PREFIX + 'categories', JSON.stringify(categories));
-  }, [categories]);
+  }, [categories, LOCAL_STORAGE_PREFIX]);
 
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_PREFIX + 'transactions', JSON.stringify(transactions));
-  }, [transactions]);
+  }, [transactions, LOCAL_STORAGE_PREFIX]);
 
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_PREFIX + 'scheduled', JSON.stringify(scheduledTransactions));
-  }, [scheduledTransactions]);
+  }, [scheduledTransactions, LOCAL_STORAGE_PREFIX]);
 
   // Initial Fetch from Supabase
   // Fetch function to sync with Supabase
@@ -122,22 +114,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
+    // Don't load if user not authenticated yet
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Fetch Categories
+      // Fetch Categories — filtered by user_id (RLS also enforces this)
       const { data: dbCategories, error: catError } = await supabase
         .from('categories')
         .select('*, subcategories(*)');
 
       if (!catError) {
         setSupabaseConnected(true);
-        if (dbCategories !== null && dbCategories.length > 0) {
-          setCategories(dbCategories);
+        if (dbCategories !== null) {
+          setCategories(dbCategories.length > 0 ? dbCategories : DEFAULT_CATEGORIES);
         }
       }
 
-      // Fetch Transactions — source of truth
+      // Fetch Transactions
       const { data: dbTransactions, error: txError } = await supabase
         .from('transactions')
         .select('*')
@@ -147,7 +145,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setTransactions(dbTransactions);
       }
 
-      // Fetch Scheduled — source of truth
+      // Fetch Scheduled
       const { data: dbScheduled, error: schError } = await supabase
         .from('scheduled_transactions')
         .select('*')
@@ -161,20 +159,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
-  // Initial Fetch & Auto-sync on window focus / tab switch (mobile / desktop sync)
+  // Initial Fetch when user logs in + Auto-sync on window focus
   useEffect(() => {
-    loadFromSupabase();
-
-    const handleFocus = () => {
+    if (userId) {
       loadFromSupabase();
-    };
+    }
 
+    const handleFocus = () => { if (userId) loadFromSupabase(); };
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        loadFromSupabase();
-      }
+      if (document.visibilityState === 'visible' && userId) loadFromSupabase();
     };
 
     window.addEventListener('focus', handleFocus);
@@ -184,7 +179,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [loadFromSupabase]);
+  }, [loadFromSupabase, userId]);
 
   // Realtime subscriptions for cross-device sync
   useEffect(() => {
@@ -300,11 +295,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // --- CRUD TRANSACTIONS ---
   const addTransaction = useCallback(async (txData: Omit<Transaction, 'id' | 'created_at'>) => {
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && userId) {
       try {
-        // Attempt 1: Insert with full data including receipt fields
         const { data, error } = await supabase.from('transactions').insert([
           {
+            user_id: userId,
             description: txData.description,
             amount: txData.amount,
             type: txData.type,
@@ -320,31 +315,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ]).select().single();
 
         if (error) {
-          console.warn('Supabase insert attempt 1 failed (trying without receipt columns):', error.message);
-          // Fallback Attempt 2: Retry insert without receipt columns in case DB schema hasn't been updated yet
-          const { data: retryData, error: retryError } = await supabase.from('transactions').insert([
-            {
-              description: txData.description,
-              amount: txData.amount,
-              type: txData.type,
-              date: txData.date,
-              category_id: txData.category_id || null,
-              subcategory_id: txData.subcategory_id || null,
-              payment_method: txData.payment_method || 'Pix',
-              is_paid: txData.is_paid,
-              notes: txData.notes || null,
-            },
-          ]).select().single();
-
-          if (retryError) {
-            console.error('Supabase retry insert failed:', retryError);
-            const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
-            setTransactions((prev) => [newTx, ...prev]);
-          } else if (retryData) {
-            setSupabaseConnected(true);
-            const fullTx = { ...(retryData as Transaction), receipt_url: txData.receipt_url, receipt_name: txData.receipt_name };
-            setTransactions((prev) => [fullTx, ...prev.filter((t) => t.id !== fullTx.id)]);
-          }
+          console.error('Supabase transaction insert failed:', error.message);
+          const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
+          setTransactions((prev) => [newTx, ...prev]);
         } else if (data) {
           setSupabaseConnected(true);
           setTransactions((prev) => [data as Transaction, ...prev.filter((t) => t.id !== data.id)]);
@@ -355,7 +328,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setTransactions((prev) => [newTx, ...prev]);
       }
     } else {
-      // Offline: optimistic local insert
       const newTx: Transaction = { ...txData, id: 'tx-' + Date.now(), created_at: new Date().toISOString() };
       setTransactions((prev) => [newTx, ...prev]);
     }
@@ -389,10 +361,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // --- CRUD SCHEDULED TRANSACTIONS ---
   const addScheduledTransaction = useCallback(async (stxData: Omit<ScheduledTransaction, 'id' | 'created_at'>) => {
-    if (supabaseConnected) {
+    if (supabaseConnected && userId) {
       try {
         const { data, error } = await supabase.from('scheduled_transactions').insert([
           {
+            user_id: userId,
             description: stxData.description,
             amount: stxData.amount,
             type: stxData.type,
@@ -423,7 +396,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const newStx: ScheduledTransaction = { ...stxData, id: 'sch-' + Date.now(), created_at: new Date().toISOString() };
       setScheduledTransactions((prev) => [...prev, newStx]);
     }
-  }, [supabaseConnected]);
+  }, [supabaseConnected, userId]);
 
   const updateScheduledTransaction = useCallback(async (id: string, stxData: Partial<ScheduledTransaction>) => {
     setScheduledTransactions((prev) =>
@@ -503,10 +476,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // --- CRUD CATEGORIES ---
   const addCategory = useCallback(async (catData: Omit<Category, 'id' | 'created_at'>) => {
-    if (supabaseConnected) {
+    if (supabaseConnected && userId) {
       try {
         const { data, error } = await supabase.from('categories').insert([
           {
+            user_id: userId,
             name: catData.name,
             type: catData.type,
             color: catData.color,
@@ -531,7 +505,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const newCat: Category = { ...catData, id: 'cat-' + Date.now(), subcategories: [] };
       setCategories((prev) => [...prev, newCat]);
     }
-  }, [supabaseConnected]);
+  }, [supabaseConnected, userId]);
 
   const updateCategory = useCallback(async (id: string, catData: Partial<Category>) => {
     setCategories((prev) =>
@@ -561,10 +535,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // --- CRUD SUBCATEGORIES ---
   const addSubcategory = useCallback(async (categoryId: string, name: string) => {
-    if (supabaseConnected) {
+    if (supabaseConnected && userId) {
       try {
         const { data, error } = await supabase.from('subcategories').insert([
-          { category_id: categoryId, name },
+          { user_id: userId, category_id: categoryId, name },
         ]).select().single();
 
         if (error) {
