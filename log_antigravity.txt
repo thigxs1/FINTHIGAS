@@ -229,6 +229,26 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 - **Service Worker (`public/sw.js` + `src/main.tsx`)**: Registro automático do Service Worker para cache inteligente de assets estáticos, suporte offline e gerenciamento de cliques em notificações.
 - **Compatibilidade com iOS & Android (`index.html`)**: Meta tags para Safari iOS (`apple-mobile-web-app-capable`, `apple-touch-icon`, `theme-color`) permitindo instalação direta na tela de início de iPhones e Androids como aplicativo nativo.
 
+### Sessão 11 — Nova Identidade Visual (Logo & Ícone PWA) e Lançamento por Voz (Antigravity)
+> Data: 2026-08-28
+
+#### 🎨 Nova Identidade Visual & Ícones
+- **Logo e Ícone Oficial**: Adicionados os novos assets (`public/icon.png`, `public/logo.png`, `public/apple-touch-icon.png`, `public/pwa-icon.png`, `src/assets/icon.png`, `src/assets/logo.png`).
+- **Guia do Navegador & PWA (`index.html` + `manifest.webmanifest`)**: Favicon, Apple Touch Icon e manifesto PWA atualizados para utilizar o novo ícone estilizado da carteira 3D com folha/seta de crescimento.
+- **Cabeçalho & Login (`Header.tsx` + `AuthView.tsx`)**: Substituído o ícone genérico pelo novo logo oficial do FINTHIGAS com cantos arredondados e iluminação moderna.
+
+#### 🎙️ Assistente de Lançamento Inteligente por Voz (`src/components/Modals/VoiceTransactionModal.tsx`) [NOVO]
+- **Web Speech API**: Integração nativa com reconhecimento de fala em português (`pt-BR`).
+- **Botão Flutuante Global (`App.tsx`)**: Botão de ação rápida fixo no canto inferior direito com gradiente e animação de pulso, permitindo registrar lançamentos por voz a partir de qualquer tela do sistema.
+- **Botão na Tabela de Transações (`TransactionsView.tsx`)**: Botão dedicado *"Lançar por Voz"* na barra de ações.
+- **Parser NLP Inteligente em Português**:
+  - Extrai tipo (Entrada vs Saída com detecção de verbos "gastei", "comprei", "recebi", "salário", etc.).
+  - Extrai valores numéricos (moeda, decimais e números por extenso).
+  - Identifica forma de pagamento (Pix, Cartão de Crédito/Débito, Boleto, Dinheiro, etc.).
+  - Mapeia automaticamente a categoria e subcategoria mais provável por palavras-chave semânticas.
+  - Detecta datas ("ontem", "anteontem", "hoje").
+- **Card de Pré-visualização & Edição**: Permite revisar e ajustar qualquer campo antes de confirmar o lançamento com 1 clique.
+
 ---
 
 ## 🔴 O que AINDA PRECISA ser feito / Pendências
@@ -265,6 +285,7 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-27 — Sessão 10 (Suporte Completo a PWA & Atalho Mobile/Desktop)_
+_Última atualização: 2026-08-28 — Sessão 11 (Nova Identidade Visual & Lançamento por Voz)_
+
 
 

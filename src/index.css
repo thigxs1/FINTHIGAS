@@ -837,3 +837,13 @@ select option {
   flex-wrap: wrap;
   gap: 12px;
 }
+
+.floating-voice-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 32px rgba(124, 58, 237, 0.65) !important;
+}
+
+.floating-voice-btn:active {
+  transform: scale(0.95);
+}
+

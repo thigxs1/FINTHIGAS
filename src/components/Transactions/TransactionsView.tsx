@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { Transaction, TransactionType } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText, ArrowUpDown, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText, ArrowUpDown, Download, ChevronLeft, ChevronRight, Mic } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 type SortOption = 'date_desc' | 'date_asc' | 'abc' | 'created_at' | 'payment_date';
 import { TransactionModal } from '../Modals/TransactionModal';
 import { ReceiptViewerModal } from '../Modals/ReceiptViewerModal';
+import { VoiceTransactionModal } from '../Modals/VoiceTransactionModal';
 
 export const TransactionsView: React.FC = () => {
   const { filteredTransactions, categories, deleteTransaction } = useFinance();
@@ -17,6 +18,7 @@ export const TransactionsView: React.FC = () => {
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [sortOption, setSortOption] = useState<SortOption>('date_desc');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('expense');
   const [viewingReceiptTx, setViewingReceiptTx] = useState<Transaction | null>(null);
@@ -207,6 +209,17 @@ export const TransactionsView: React.FC = () => {
 
           {/* New Transaction Buttons & Export */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              className="btn-primary"
+              style={{
+                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                boxShadow: '0 4px 14px rgba(124, 58, 237, 0.35)',
+              }}
+              onClick={() => setIsVoiceModalOpen(true)}
+              title="Lançamento Rápido por Voz"
+            >
+              <Mic size={16} /> <span>Lançar por Voz</span>
+            </button>
             <button className="btn-secondary" style={{ padding: '8px 12px', gap: '6px' }} onClick={handleExportCSV} title="Exportar CSV">
               <Download size={16} /> <span className="hide-mobile">CSV</span>
             </button>
@@ -350,6 +363,11 @@ export const TransactionsView: React.FC = () => {
       <ReceiptViewerModal
         transaction={viewingReceiptTx}
         onClose={() => setViewingReceiptTx(null)}
+      />
+
+      <VoiceTransactionModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
       />
     </div>
   );

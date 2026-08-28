@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Wallet, Mail, Lock, User, Eye, EyeOff, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 type AuthTab = 'login' | 'signup' | 'forgot';
 
@@ -125,21 +125,18 @@ export const AuthView: React.FC = () => {
     >
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <div
+        <img
+          src="/icon.png"
+          alt="FINTHIGAS Logo"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+            width: '64px',
+            height: '64px',
+            borderRadius: '18px',
             boxShadow: '0 8px 32px rgba(124, 58, 237, 0.4)',
             marginBottom: '12px',
+            objectFit: 'cover',
           }}
-        >
-          <Wallet size={28} color="white" />
-        </div>
+        />
         <h1
           style={{
             fontFamily: 'Outfit, sans-serif',

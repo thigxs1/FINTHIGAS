@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
-import { Wallet, ChevronDown, Database, CheckCircle2, AlertTriangle, RefreshCw, Trash2, LogOut, User } from 'lucide-react';
+import { ChevronDown, Database, CheckCircle2, AlertTriangle, RefreshCw, Trash2, LogOut, User } from 'lucide-react';
 import { getMonthName } from '../utils/formatters';
 
 export const Header: React.FC = () => {
@@ -50,9 +50,18 @@ export const Header: React.FC = () => {
     <header className="app-header glass-card">
       {/* Brand */}
       <div className="brand-logo">
-        <div className="brand-icon">
-          <Wallet size={20} />
-        </div>
+        <img
+          src="/icon.png"
+          alt="FINTHIGAS"
+          style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '10px',
+            objectFit: 'cover',
+            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.35)',
+            flexShrink: 0,
+          }}
+        />
         <div>
           <h1 className="brand-title">FINTHIGAS</h1>
           <p className="brand-subtitle">Gestão Financeira & Controle de Gastos</p>
