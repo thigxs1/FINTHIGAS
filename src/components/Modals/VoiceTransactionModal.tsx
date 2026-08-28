@@ -130,7 +130,8 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
       };
 
       recorder.onstop = async () => {
-        const actualMime = recorder.mimeType || mimeType || 'audio/webm';
+        const rawMime = recorder.mimeType || mimeType || 'audio/webm';
+        const actualMime = rawMime.split(';')[0].trim() || 'audio/webm';
         const audioBlob = new Blob(audioChunksRef.current, { type: actualMime });
         if (audioBlob.size > 0) {
           await handleSendAudio(audioBlob, actualMime);

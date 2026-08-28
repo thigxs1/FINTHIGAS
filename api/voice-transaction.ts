@@ -21,8 +21,14 @@ export async function processVoiceTransaction(payload: VoiceTransactionPayload) 
     throw new Error('Nenhum dado de áudio foi enviado.');
   }
 
-  // Clean base64 string if it contains data URL prefix
-  const cleanBase64 = audioBase64.replace(/^data:[^;]+;base64,/, '');
+  // Isolate pure Base64 data string (remove prefix like 'data:audio/webm;codecs=opus;base64,')
+  const cleanBase64 = audioBase64.includes(',')
+    ? audioBase64.split(',')[1].trim()
+    : audioBase64.trim();
+
+  // Extract clean MIME type without parameters (e.g., 'audio/webm' instead of 'audio/webm;codecs=opus')
+  const rawMime = mimeType || (audioBase64.includes(';') ? audioBase64.split(';')[0].replace('data:', '') : 'audio/webm');
+  const cleanMimeType = rawMime.split(';')[0].trim() || 'audio/webm';
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
@@ -44,7 +50,7 @@ export async function processVoiceTransaction(payload: VoiceTransactionPayload) 
           {
             inlineData: {
               data: cleanBase64,
-              mimeType: mimeType.split(';')[0] || 'audio/webm',
+              mimeType: cleanMimeType,
             },
           },
           {
