@@ -266,21 +266,21 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 
 ---
 
-### Sessão 13 — Upgrade Multimodal de Áudio com Google Gemini 2.5 Flash & MediaRecorder (Antigravity)
+### Sessão 13 — Upgrade Multimodal de Áudio com Google Gemini 3.6 Flash & MediaRecorder (Antigravity)
 > Data: 2026-08-28
 
 #### 🎙️ Gravação Multimodal no Frontend (`VoiceTransactionModal.tsx`)
 - Substituída a antiga Web Speech API pela **MediaRecorder API** nativa do navegador para captura direta de áudio em alta fidelidade (`audio/webm`, `audio/mp4` ou `audio/ogg`).
-- Interface premium com animação de ondas sonoras, cronômetro em tempo real, botão pulsar e indicador de status.
+- Interface premium com animação de ondas sonoras, cronômetro em tempo real, botão pulsar e indicador de status ("Powered by Google Gemini 3.6 Flash").
 - Conversão automática dos chunks de áudio em Base64 e envio seguro para o backend via requisição POST.
-- Exibição de estado de processamento dinâmico ("Processando com Gemini 2.5 Flash...").
+- Exibição de estado de processamento dinâmico ("Processando com Gemini 3.6 Flash...").
 - Notificação de sucesso com o badge **"Lançamento Registrado!"**, discriminação de tipo (Receita/Despesa), valor em reais, descrição resumida e categoria associada.
 
 #### 🧠 Backend & Integração com SDK Oficial do Google GenAI (`api/voice-transaction.ts`)
 - Adicionada a dependência oficial **`@google/genai`**.
 - Criação do endpoint `/api/voice-transaction` (compatível com Serverless e Vercel).
 - **Sanitização de Base64 e MIME Type**: Isolamento estrito dos dados Base64 com `.split(',')[1]` e extração limpa do `mimeType` (`audio/webm`, `audio/mp4`, etc., sem sufixos de codecs como `;codecs=opus`), garantindo payload 100% em conformidade com a especificação `inlineData` do SDK Google GenAI.
-- Integração direta com o modelo **`gemini-2.5-flash`** utilizando a System Instruction solicitada:
+- Integração direta com o modelo **`gemini-3.6-flash`** utilizando a System Instruction solicitada:
   > *"Você é um extrator de dados financeiros. Ouça o áudio e devolva EXATAMENTE um objeto JSON com as seguintes chaves: "tipo" (receita ou despesa), "valor" (apenas números float), "categoria" (ex: Alimentação, Transporte, etc) e "descricao" (resumo curto). Ignore gírias e ruídos."*
 - Formatação estrita com `responseMimeType: "application/json"`.
 - Persistência automática no banco de dados **Supabase** (tabela `transactions`) com mapeamento inteligente da categoria do usuário autenticado.

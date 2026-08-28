@@ -42,7 +42,7 @@ export async function processVoiceTransaction(payload: VoiceTransactionPayload) 
     'Você é um extrator de dados financeiros. Ouça o áudio e devolva EXATAMENTE um objeto JSON com as seguintes chaves: "tipo" (receita ou despesa), "valor" (apenas números float), "categoria" (ex: Alimentação, Transporte, etc) e "descricao" (resumo curto). Ignore gírias e ruídos.';
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     contents: [
       {
         role: 'user',
@@ -121,7 +121,7 @@ export async function processVoiceTransaction(payload: VoiceTransactionPayload) 
             category_id: categoryId,
             payment_method: 'Pix',
             is_paid: true,
-            notes: `Processado por Gemini 2.5 Flash (${categoryName})`,
+            notes: `Processado por Gemini 3.6 Flash (${categoryName})`,
           },
         ])
         .select()

@@ -213,7 +213,7 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
             category_id: matchCat?.id,
             payment_method: 'Pix',
             is_paid: true,
-            notes: `Lançado via Gemini 2.5 Flash (${data.extracted.categoria})`,
+            notes: `Lançado via Gemini 3.6 Flash (${data.extracted.categoria})`,
           });
         }
       }
@@ -265,7 +265,7 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Registro por Áudio</h3>
-              <span style={{ fontSize: '0.72rem', color: '#a1a1aa' }}>Powered by Google Gemini 2.5 Flash</span>
+              <span style={{ fontSize: '0.72rem', color: '#a1a1aa' }}>Powered by Google Gemini 3.6 Flash</span>
             </div>
           </div>
           <button className="btn-secondary" style={{ padding: '6px' }} onClick={onClose}>
@@ -381,7 +381,7 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
               </div>
               <div>
                 <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', color: 'var(--text-primary)' }}>
-                  Processando áudio com Gemini 2.5 Flash...
+                  Processando áudio com Gemini 3.6 Flash...
                 </h4>
                 <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   Compreendendo contexto e extraindo dados financeiros com precisão.
