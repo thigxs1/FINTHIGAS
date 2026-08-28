@@ -1,291 +1,418 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
 import type { TransactionType } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
-import { Mic, MicOff, Check, X, Sparkles, RefreshCw, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import {
+  Mic,
+  Square,
+  CheckCircle2,
+  X,
+  Sparkles,
+  RefreshCw,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Loader2,
+  AlertCircle,
+  Tag,
+  FileText,
+} from 'lucide-react';
 
 interface VoiceTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface ParsedTransaction {
-  description: string;
-  amount: number;
-  type: TransactionType;
-  date: string;
-  category_id?: string;
-  subcategory_id?: string;
-  payment_method: string;
+interface ExtractedData {
+  tipo: 'receita' | 'despesa';
+  valor: number;
+  categoria: string;
+  descricao: string;
 }
 
 export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ isOpen, onClose }) => {
   const { categories, addTransaction } = useFinance();
+  const { user } = useAuth();
 
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [parsed, setParsed] = useState<ParsedTransaction | null>(null);
-  const [isSupported, setIsSupported] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successResult, setSuccessResult] = useState<ExtractedData | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    // Check Web Speech API support
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setIsSupported(false);
+  // Clean up streams and timers when modal closes
+  const cleanupRecording = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-  }, []);
-
-  const parseVoiceText = (text: string): ParsedTransaction => {
-    const lower = text.toLowerCase();
-
-    // 1. Detect Type (income vs expense)
-    const incomeKeywords = ['recebi', 'ganhei', 'receita', 'salário', 'salario', 'pix recebido', 'rendimento', 'depósito', 'deposito', 'vendi', 'entrada'];
-    const isIncome = incomeKeywords.some(kw => lower.includes(kw));
-    const type: TransactionType = isIncome ? 'income' : 'expense';
-
-    // 2. Detect Amount
-    let amount = 0;
-    // Match patterns like "R$ 50,00", "50 reais", "50,50", "50.50", "50", "cinquenta reais"
-    const numberWordsMap: Record<string, number> = {
-      'um': 1, 'dois': 2, 'três': 3, 'tres': 3, 'quatro': 4, 'cinco': 5,
-      'seis': 6, 'sete': 7, 'oito': 8, 'nove': 9, 'dez': 10,
-      'vinte': 20, 'trinta': 30, 'quarenta': 40, 'cinquenta': 50,
-      'sessenta': 60, 'setenta': 70, 'oitenta': 80, 'noventa': 90,
-      'cem': 100, 'cento': 100, 'duzentos': 200, 'trezentos': 300,
-      'quatrocentos': 400, 'quinhentos': 500, 'mil': 1000,
-    };
-
-    // Regex for numeric values: "50,50", "50.00", "50", "1.500"
-    const regexCurrency = /(?:r\$\s*)?(\d+(?:[.,]\d+)?)/i;
-    const matchNum = lower.match(regexCurrency);
-
-    if (matchNum) {
-      const numStr = matchNum[1].replace(/\./g, '').replace(',', '.');
-      amount = parseFloat(numStr) || 0;
-    } else {
-      // Try word matching (e.g. "cinquenta reais")
-      for (const [word, val] of Object.entries(numberWordsMap)) {
-        if (lower.includes(word)) {
-          amount += val;
-        }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (err) {
+        console.warn('Error stopping mediaRecorder:', err);
       }
     }
-
-    // 3. Detect Payment Method
-    let payment_method = 'Pix';
-    if (lower.includes('crédito') || lower.includes('credito') || lower.includes('cartão de crédito')) payment_method = 'Cartão de Crédito';
-    else if (lower.includes('débito') || lower.includes('debito') || lower.includes('cartão de débito')) payment_method = 'Cartão de Débito';
-    else if (lower.includes('boleto')) payment_method = 'Boleto';
-    else if (lower.includes('dinheiro') || lower.includes('em espécie')) payment_method = 'Dinheiro';
-    else if (lower.includes('ted') || lower.includes('transferência') || lower.includes('transferencia')) payment_method = 'Transferência';
-
-    // 4. Detect Date
-    const today = new Date();
-    let dateStr = today.toISOString().split('T')[0];
-    if (lower.includes('ontem')) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - 1);
-      dateStr = d.toISOString().split('T')[0];
-    } else if (lower.includes('anteontem')) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - 2);
-      dateStr = d.toISOString().split('T')[0];
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-
-    // 5. Match Category & Subcategory by semantic keywords
-    const availableCategories = categories.filter(c => c.type === type);
-    let matchedCategoryId = availableCategories[0]?.id;
-    let matchedSubcategoryId: string | undefined;
-
-    const categoryKeywords: Record<string, string[]> = {
-      'Alimentação': ['mercado', 'supermercado', 'almoço', 'almoco', 'jantar', 'lanche', 'ifood', 'delivery', 'restaurante', 'pizza', 'hambúrguer', 'comida', 'café', 'padaria'],
-      'Transporte': ['uber', '99', 'táxi', 'gasolina', 'combustível', 'posto', 'estacionamento', 'pedágio', 'ônibus', 'metro', 'manutenção', 'carro', 'moto'],
-      'Moradia': ['aluguel', 'luz', 'energia', 'água', 'agua', 'internet', 'condomínio', 'condominio', 'iptu', 'gás', 'gas', 'casa'],
-      'Lazer & Estilo': ['cinema', 'filme', 'viagem', 'passeio', 'netflix', 'spotify', 'jogo', 'streaming', 'roupa', 'shopping'],
-      'Saúde & Bem-Estar': ['remédio', 'remedio', 'farmácia', 'farmacia', 'médico', 'medico', 'consulta', 'academia', 'dentista', 'exame'],
-      'Salário & Prolabore': ['salário', 'salario', 'adiantamento', 'bônus', 'plr', 'comissão', 'pagamento'],
-      'Investimentos & Rendimentos': ['dividendo', 'rendimento', 'ações', 'fiis', 'cripto', 'juros', 'investimento'],
-    };
-
-    for (const cat of availableCategories) {
-      const keywords = categoryKeywords[cat.name] || [];
-      const hasKeyword = keywords.some(kw => lower.includes(kw)) || lower.includes(cat.name.toLowerCase());
-      if (hasKeyword) {
-        matchedCategoryId = cat.id;
-        // Check subcategories
-        if (cat.subcategories && cat.subcategories.length > 0) {
-          const matchedSub = cat.subcategories.find(s => lower.includes(s.name.toLowerCase()));
-          if (matchedSub) matchedSubcategoryId = matchedSub.id;
-        }
-        break;
-      }
-    }
-
-    // 6. Generate Clean Description
-    let description = text.trim();
-    // Capitalize first letter
-    description = description.charAt(0).toUpperCase() + description.slice(1);
-
-    return {
-      description,
-      amount: amount || 0,
-      type,
-      date: dateStr,
-      category_id: matchedCategoryId,
-      subcategory_id: matchedSubcategoryId,
-      payment_method,
-    };
-  };
-
-  const startListening = () => {
-    setErrorMsg('');
-    setTranscript('');
-    setParsed(null);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setIsSupported(false);
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'pt-BR';
-      recognition.continuous = false;
-      recognition.interimResults = true;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      recognition.onresult = (event: any) => {
-        let currentTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript;
-        }
-        setTranscript(currentTranscript);
-
-        if (event.results[0].isFinal) {
-          const parsedResult = parseVoiceText(currentTranscript);
-          setParsed(parsedResult);
-        }
-      };
-
-      recognition.onerror = (event: { error: string }) => {
-        console.warn('Speech recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-          setErrorMsg('Permissão de microfone negada. Autorize o microfone no navegador.');
-        } else if (event.error === 'no-speech') {
-          setErrorMsg('Nenhuma voz detectada. Tente falar novamente.');
-        } else {
-          setErrorMsg('Erro ao capturar áudio: ' + event.error);
-        }
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-      setIsListening(true);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('Não foi possível iniciar o microfone.');
-      setIsListening(false);
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
+    setIsRecording(false);
+    setRecordingDuration(0);
   };
 
   useEffect(() => {
-    if (isOpen) {
-      setTranscript('');
-      setParsed(null);
+    if (!isOpen) {
+      cleanupRecording();
       setErrorMsg('');
-      startListening();
-    } else {
-      stopListening();
+      setSuccessResult(null);
+      setIsProcessing(false);
     }
-    return () => stopListening();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => cleanupRecording();
   }, [isOpen]);
 
-  const handleConfirm = async () => {
-    if (!parsed || parsed.amount <= 0) {
-      alert('Por favor, informe uma transação com valor válido.');
+  // Convert Blob to Base64 string
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        resolve(base64data);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const startRecording = async () => {
+    setErrorMsg('');
+    setSuccessResult(null);
+    audioChunksRef.current = [];
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setErrorMsg('Seu navegador não suporta gravação de áudio (MediaDevices API).');
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      await addTransaction({
-        description: parsed.description,
-        amount: parsed.amount,
-        type: parsed.type,
-        date: parsed.date,
-        category_id: parsed.category_id,
-        subcategory_id: parsed.subcategory_id,
-        payment_method: parsed.payment_method,
-        is_paid: true,
-        notes: `Lançado por voz: "${transcript}"`,
-      });
-      onClose();
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao salvar lançamento.');
-    } finally {
-      setIsSubmitting(false);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // Select best supported MIME type
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg';
+        } else {
+          mimeType = '';
+        }
+      }
+
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const actualMime = recorder.mimeType || mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: actualMime });
+        if (audioBlob.size > 0) {
+          await handleSendAudio(audioBlob, actualMime);
+        }
+      };
+
+      recorder.start(250); // collect in 250ms chunks
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      timerRef.current = window.setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Error starting audio recording:', error);
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setErrorMsg('Permissão de microfone negada. Permita o acesso ao microfone no navegador.');
+      } else {
+        setErrorMsg('Não foi possível acessar o microfone: ' + (error.message || 'Erro desconhecido.'));
+      }
+      cleanupRecording();
     }
+  };
+
+  const stopRecording = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsRecording(false);
+  };
+
+  const handleSendAudio = async (blob: Blob, mimeType: string) => {
+    setIsProcessing(true);
+    setErrorMsg('');
+
+    try {
+      const base64Audio = await blobToBase64(blob);
+
+      const response = await fetch('/api/voice-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audioBase64: base64Audio,
+          mimeType,
+          userId: user?.id || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Falha ao processar o áudio com o Gemini.');
+      }
+
+      if (data.extracted) {
+        setSuccessResult(data.extracted);
+
+        // If not saved directly in DB by backend (e.g. offline / guest mode), add via context
+        if (!data.transaction) {
+          const type: TransactionType = data.extracted.tipo === 'receita' ? 'income' : 'expense';
+          const matchCat = categories.find(
+            (c) => c.type === type && c.name.toLowerCase().includes((data.extracted.categoria || '').toLowerCase())
+          ) || categories.find((c) => c.type === type);
+
+          await addTransaction({
+            description: data.extracted.descricao || 'Lançamento por Voz',
+            amount: Number(data.extracted.valor) || 0,
+            type,
+            date: new Date().toISOString().split('T')[0],
+            category_id: matchCat?.id,
+            payment_method: 'Pix',
+            is_paid: true,
+            notes: `Lançado via Gemini 2.5 Flash (${data.extracted.categoria})`,
+          });
+        }
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error('Audio processing error:', error);
+      setErrorMsg(error.message || 'Erro ao processar áudio com o Gemini.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: '460px',
+          background: 'linear-gradient(180deg, #18181b 0%, #09090b 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.8), 0 0 40px rgba(124, 58, 237, 0.15)',
+        }}
+      >
         {/* Header */}
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={18} color="var(--accent-primary)" />
-            <h3 style={{ margin: 0 }}>Lançamento Rápido por Voz</h3>
+        <div className="modal-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)',
+              }}
+            >
+              <Sparkles size={18} color="#ffffff" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Registro por Áudio</h3>
+              <span style={{ fontSize: '0.72rem', color: '#a1a1aa' }}>Powered by Google Gemini 2.5 Flash</span>
+            </div>
           </div>
           <button className="btn-secondary" style={{ padding: '6px' }} onClick={onClose}>
             <X size={18} />
           </button>
         </div>
 
-        <div className="modal-body" style={{ textAlign: 'center', gap: '18px' }}>
-          {!isSupported ? (
-            <div style={{ padding: '20px', color: '#f43f5e', background: 'rgba(244, 63, 94, 0.1)', borderRadius: '12px' }}>
-              <p style={{ fontWeight: 600, marginBottom: '6px' }}>Reconhecimento de Voz Indisponível</p>
-              <small style={{ color: 'var(--text-muted)' }}>
-                Seu navegador atual não suporta a API de fala. Experimente usar o Google Chrome, Edge ou Safari no celular.
-              </small>
+        {/* Modal Body */}
+        <div className="modal-body" style={{ textAlign: 'center', gap: '20px', padding: '24px 12px' }}>
+          {/* Success State */}
+          {successResult ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px',
+                animation: 'fadeIn 0.3s ease',
+              }}
+            >
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '2px solid #10b981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 25px rgba(16, 185, 129, 0.3)',
+                }}
+              >
+                <CheckCircle2 size={36} color="#10b981" />
+              </div>
+
+              <div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '1.15rem', color: '#10b981', fontWeight: 700 }}>
+                  Lançamento Registrado!
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Os dados foram processados e salvos com sucesso no sistema.
+                </p>
+              </div>
+
+              {/* Extracted Data Card */}
+              <div
+                style={{
+                  width: '100%',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  textAlign: 'left',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '4px 10px',
+                      borderRadius: '20px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      background: successResult.tipo === 'receita' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                      color: successResult.tipo === 'receita' ? '#10b981' : '#f43f5e',
+                      border: `1px solid ${successResult.tipo === 'receita' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                    }}
+                  >
+                    {successResult.tipo === 'receita' ? <ArrowUpCircle size={14} /> : <ArrowDownCircle size={14} />}
+                    {successResult.tipo === 'receita' ? 'RECEITA' : 'DESPESA'}
+                  </span>
+
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: successResult.tipo === 'receita' ? '#10b981' : '#f43f5e' }}>
+                    {formatCurrency(successResult.valor)}
+                  </span>
+                </div>
+
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
+                    <FileText size={15} color="var(--text-muted)" />
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{successResult.descricao}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    <Tag size={14} />
+                    <span>Categoria: <strong style={{ color: '#e4e4e7' }}>{successResult.categoria}</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : isProcessing ? (
+            /* Processing State */
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '20px 0' }}>
+              <div
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(79, 70, 229, 0.2))',
+                  border: '2px solid #7c3aed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  animation: 'pulse 1.5s infinite',
+                }}
+              >
+                <Loader2 size={40} color="#a78bfa" className="spin-animation" style={{ animation: 'spin 1s linear infinite' }} />
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', color: 'var(--text-primary)' }}>
+                  Processando áudio com Gemini 2.5 Flash...
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Compreendendo contexto e extraindo dados financeiros com precisão.
+                </p>
+              </div>
             </div>
           ) : (
-            <>
-              {/* Pulsing Mic Button */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '10px 0' }}>
+            /* Ready / Recording State */
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
+              {/* Mic / Stop Circle Button */}
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isRecording && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '50%',
+                      background: 'rgba(244, 63, 94, 0.2)',
+                      animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                    }}
+                  />
+                )}
                 <button
                   type="button"
-                  onClick={isListening ? stopListening : startListening}
+                  onClick={isRecording ? stopRecording : startRecording}
                   style={{
-                    width: '84px',
-                    height: '84px',
+                    width: '88px',
+                    height: '88px',
                     borderRadius: '50%',
                     border: 'none',
-                    background: isListening
+                    background: isRecording
                       ? 'linear-gradient(135deg, #f43f5e, #e11d48)'
                       : 'linear-gradient(135deg, #7c3aed, #4f46e5)',
                     color: 'white',
@@ -293,142 +420,130 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    boxShadow: isListening
-                      ? '0 0 30px rgba(244, 63, 94, 0.6), 0 0 60px rgba(244, 63, 94, 0.3)'
-                      : '0 8px 24px rgba(124, 58, 237, 0.4)',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
+                    boxShadow: isRecording
+                      ? '0 0 35px rgba(244, 63, 94, 0.6)'
+                      : '0 10px 28px rgba(124, 58, 237, 0.45)',
+                    transition: 'all 0.25s ease',
+                    zIndex: 2,
                   }}
+                  title={isRecording ? 'Parar Gravação' : 'Iniciar Gravação'}
                 >
-                  {isListening ? <Mic size={36} /> : <MicOff size={36} />}
+                  {isRecording ? <Square size={32} fill="white" /> : <Mic size={38} />}
                 </button>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, marginTop: '12px', color: isListening ? '#f43f5e' : 'var(--text-muted)' }}>
-                  {isListening ? 'Ouvindo... Fale agora' : 'Clique no microfone para falar'}
-                </span>
               </div>
 
-              {/* Speech Transcript or Error */}
-              {errorMsg ? (
-                <div style={{ padding: '8px 12px', background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', borderRadius: '8px', fontSize: '0.83rem' }}>
-                  {errorMsg}
-                </div>
-              ) : transcript ? (
-                <div style={{ padding: '12px 16px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid var(--border-color)', borderRadius: '10px', fontSize: '0.92rem', fontStyle: 'italic', color: 'var(--text-primary)' }}>
-                  "{transcript}"
-                </div>
-              ) : (
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                  <strong>Exemplos de voz:</strong><br />
-                  • <em>"Gastei 45 reais no almoço hoje"</em><br />
-                  • <em>"Paguei 150 de luz no pix ontem"</em><br />
-                  • <em>"Recebi 3500 de salário"</em>
-                </div>
-              )}
-
-              {/* Parsed Result Card */}
-              {parsed && (
-                <div
+              {/* Status and Timer */}
+              <div>
+                <span
                   style={{
-                    textAlign: 'left',
-                    background: parsed.type === 'income' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)',
-                    border: `1px solid ${parsed.type === 'income' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(244, 63, 94, 0.25)'}`,
-                    borderRadius: '12px',
-                    padding: '16px',
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    color: isRecording ? '#f43f5e' : 'var(--text-primary)',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: parsed.type === 'income' ? '#10b981' : '#f43f5e' }}>
-                      {parsed.type === 'income' ? <ArrowUpCircle size={16} /> : <ArrowDownCircle size={16} />}
-                      {parsed.type === 'income' ? 'ENTRADA DETECTADA' : 'SAÍDA DETECTADA'}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setParsed({ ...parsed, type: parsed.type === 'income' ? 'expense' : 'income' })}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
-                    >
-                      Alternar tipo
-                    </button>
-                  </div>
-
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.75rem' }}>Descrição</label>
-                    <input
-                      type="text"
-                      value={parsed.description}
-                      onChange={(e) => setParsed({ ...parsed, description: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="form-row" style={{ margin: 0 }}>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.75rem' }}>Valor (R$)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={parsed.amount || ''}
-                        onChange={(e) => setParsed({ ...parsed, amount: parseFloat(e.target.value) || 0 })}
+                  {isRecording ? (
+                    <>
+                      <span
+                        style={{
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '50%',
+                          backgroundColor: '#f43f5e',
+                          display: 'inline-block',
+                        }}
                       />
-                    </div>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.75rem' }}>Data</label>
-                      <input
-                        type="date"
-                        value={parsed.date}
-                        onChange={(e) => setParsed({ ...parsed, date: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                      Gravando: {formatTimer(recordingDuration)}
+                    </>
+                  ) : (
+                    'Toque para começar a falar'
+                  )}
+                </span>
+                <p style={{ margin: '6px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {isRecording
+                    ? 'Fale o valor, tipo e detalhes. Clique no quadrado quando terminar.'
+                    : 'Grave sua despesa ou receita naturalmente.'}
+                </p>
+              </div>
 
-                  <div className="form-row" style={{ margin: 0 }}>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.75rem' }}>Categoria</label>
-                      <select
-                        value={parsed.category_id || ''}
-                        onChange={(e) => setParsed({ ...parsed, category_id: e.target.value, subcategory_id: undefined })}
-                      >
-                        {categories.filter(c => c.type === parsed.type).map(cat => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label style={{ fontSize: '0.75rem' }}>Forma de Pagamento</label>
-                      <select
-                        value={parsed.payment_method}
-                        onChange={(e) => setParsed({ ...parsed, payment_method: e.target.value })}
-                      >
-                        <option value="Pix">Pix</option>
-                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                        <option value="Cartão de Débito">Cartão de Débito</option>
-                        <option value="Boleto">Boleto</option>
-                        <option value="Dinheiro">Dinheiro</option>
-                        <option value="Transferência">Transferência</option>
-                      </select>
-                    </div>
-                  </div>
+              {/* Error Alert */}
+              {errorMsg && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    background: 'rgba(244, 63, 94, 0.1)',
+                    border: '1px solid rgba(244, 63, 94, 0.3)',
+                    color: '#f43f5e',
+                    borderRadius: '10px',
+                    fontSize: '0.83rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    textAlign: 'left',
+                  }}
+                >
+                  <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                  <span>{errorMsg}</span>
                 </div>
               )}
-            </>
+
+              {/* Examples Box */}
+              {!isRecording && (
+                <div
+                  style={{
+                    width: '100%',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px dashed rgba(255, 255, 255, 0.1)',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    fontSize: '0.78rem',
+                    color: 'var(--text-muted)',
+                    textAlign: 'left',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <strong style={{ color: 'var(--text-secondary)' }}>💡 Como falar:</strong>
+                  <br />
+                  • <em>"Gastei 54 reais no supermercado hoje"</em>
+                  <br />
+                  • <em>"Recebi 4200 de salário"</em>
+                  <br />
+                  • <em>"Paguei 35 de Uber para o trabalho"</em>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="modal-footer">
-          <button type="button" className="btn-secondary" onClick={startListening} title="Tentar Novamente">
-            <RefreshCw size={14} /> Falar de Novo
-          </button>
-          {parsed && parsed.amount > 0 && (
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={isSubmitting}
-              onClick={handleConfirm}
-              style={{ background: '#10b981' }}
-            >
-              <Check size={16} /> Confirmar {formatCurrency(parsed.amount)}
+        {/* Modal Footer */}
+        <div className="modal-footer" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '14px' }}>
+          {successResult ? (
+            <>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setSuccessResult(null);
+                  startRecording();
+                }}
+              >
+                <RefreshCw size={15} /> Novo Áudio
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: '#10b981' }}
+                onClick={onClose}
+              >
+                <CheckCircle2 size={16} /> Concluir
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={isProcessing}>
+              Cancelar
             </button>
           )}
         </div>
