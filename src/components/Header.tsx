@@ -54,11 +54,10 @@ export const Header: React.FC = () => {
           src="/icon.png"
           alt="FINTHIGAS"
           style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '10px',
-            objectFit: 'cover',
-            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.35)',
+            width: '40px',
+            height: '40px',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 4px 12px rgba(124, 58, 237, 0.45))',
             flexShrink: 0,
           }}
         />
