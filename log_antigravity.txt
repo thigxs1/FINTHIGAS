@@ -279,6 +279,7 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 #### 🧠 Backend & Integração com SDK Oficial do Google GenAI (`api/voice-transaction.ts`)
 - Adicionada a dependência oficial **`@google/genai`**.
 - Criação do endpoint `/api/voice-transaction` (compatível com Serverless e Vercel).
+- **Sanitização de Base64 e MIME Type**: Isolamento estrito dos dados Base64 com `.split(',')[1]` e extração limpa do `mimeType` (`audio/webm`, `audio/mp4`, etc., sem sufixos de codecs como `;codecs=opus`), garantindo payload 100% em conformidade com a especificação `inlineData` do SDK Google GenAI.
 - Integração direta com o modelo **`gemini-2.5-flash`** utilizando a System Instruction solicitada:
   > *"Você é um extrator de dados financeiros. Ouça o áudio e devolva EXATAMENTE um objeto JSON com as seguintes chaves: "tipo" (receita ou despesa), "valor" (apenas números float), "categoria" (ex: Alimentação, Transporte, etc) e "descricao" (resumo curto). Ignore gírias e ruídos."*
 - Formatação estrita com `responseMimeType: "application/json"`.
