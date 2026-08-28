@@ -51,13 +51,13 @@ export const Header: React.FC = () => {
       {/* Brand */}
       <div className="brand-logo">
         <img
-          src="/icon.png"
+          src="/logo_pwa.svg"
           alt="FINTHIGAS"
           style={{
-            width: '46px',
-            height: '46px',
+            width: '54px',
+            height: '54px',
             objectFit: 'contain',
-            filter: 'drop-shadow(0 4px 12px rgba(124, 58, 237, 0.45))',
+            filter: 'drop-shadow(0 4px 14px rgba(124, 58, 237, 0.45))',
             flexShrink: 0,
           }}
         />

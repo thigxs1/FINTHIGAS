@@ -249,6 +249,21 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
   - Detecta datas ("ontem", "anteontem", "hoje").
 - **Card de Pré-visualização & Edição**: Permite revisar e ajustar qualquer campo antes de confirmar o lançamento com 1 clique.
 
+### Sessão 12 — Correção e Padronização Definitiva da Identidade Visual (SVG + PWA + iOS) (Antigravity)
+> Data: 2026-08-28
+
+#### 🎨 Nova Padronização dos Ícones & SVG Oficial (`logo_pwa.svg`)
+- **SVG Oficial em Alta Resolução**: Integrado o arquivo vetorial definitivo `logo_pwa.svg` (com viewBox perfeitamente centralizado e preenchido em 1720x1720).
+- **Geração Automatizada de Assets Multiplataforma**: Criado pipeline (`scripts/generate-icons.js`) gerando com precisão de pixel:
+  - `logo_pwa.svg` & `icon.svg` (SVG vetorial para navegadores modernos no `<head>`).
+  - `icon-512.png` & `icon-192.png` (PNGs de alta resolução para manifest PWA com propósito standard e maskable).
+  - `apple-touch-icon.png` & `apple-touch-icon-precomposed.png` (180x180 preenchidos sem margem excessiva para tela de início de iPhones/iOS).
+  - `favicon-32x32.png` & `favicon-16x16.png` (Fallbacks clássicos de navegadores desktop).
+- **Otimização no Header e Login**:
+  - `Header.tsx`: Logo ampliado para `54px` utilizando diretamente o vetor `logo_pwa.svg`, garantindo nitidez e presença visual impecável no desktop.
+  - `AuthView.tsx`: Logo ampliado para `96px` com vetor SVG e iluminação suave.
+  - `index.html`: Configurado com suporte a favicon SVG (`type="image/svg+xml"`), fallbacks PNG e Apple Touch Icons para iOS.
+
 ---
 
 ## 🔴 O que AINDA PRECISA ser feito / Pendências
@@ -285,7 +300,7 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-28 — Sessão 11 (Nova Identidade Visual & Lançamento por Voz)_
+_Última atualização: 2026-08-28 — Sessão 12 (Identidade Visual SVG + PWA + iOS Definitiva)_
 
 
 

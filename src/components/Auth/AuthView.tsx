@@ -126,11 +126,11 @@ export const AuthView: React.FC = () => {
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <img
-          src="/icon.png"
+          src="/logo_pwa.svg"
           alt="FINTHIGAS Logo"
           style={{
-            width: '84px',
-            height: '84px',
+            width: '96px',
+            height: '96px',
             objectFit: 'contain',
             filter: 'drop-shadow(0 8px 24px rgba(124, 58, 237, 0.5))',
             marginBottom: '12px',
