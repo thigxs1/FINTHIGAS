@@ -54,8 +54,8 @@ export const Header: React.FC = () => {
           src="/icon.png"
           alt="FINTHIGAS"
           style={{
-            width: '40px',
-            height: '40px',
+            width: '46px',
+            height: '46px',
             objectFit: 'contain',
             filter: 'drop-shadow(0 4px 12px rgba(124, 58, 237, 0.45))',
             flexShrink: 0,

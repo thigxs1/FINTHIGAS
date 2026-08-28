@@ -232,10 +232,10 @@ A detecção de conectividade foi corrigida em `FinanceContext.tsx`:
 ### Sessão 11 — Nova Identidade Visual (Logo & Ícone PWA) e Lançamento por Voz (Antigravity)
 > Data: 2026-08-28
 
-#### 🎨 Nova Identidade Visual & Ícones
-- **Logo e Ícone Oficial**: Adicionados os novos assets (`public/icon.png`, `public/logo.png`, `public/apple-touch-icon.png`, `public/pwa-icon.png`, `src/assets/icon.png`, `src/assets/logo.png`).
-- **Guia do Navegador & PWA (`index.html` + `manifest.webmanifest`)**: Favicon, Apple Touch Icon e manifesto PWA atualizados para utilizar o novo ícone estilizado da carteira 3D com folha/seta de crescimento.
-- **Cabeçalho & Login (`Header.tsx` + `AuthView.tsx`)**: Substituído o ícone genérico pelo novo logo oficial do FINTHIGAS com cantos arredondados e iluminação moderna.
+#### 🎨 Nova Identidade Visual & Ícones (Ajuste)
+- **Logo e Ícone Oficial**: Foram integrados novos assets PNG transparentes (`public/icon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `src/assets/icon.png`).
+- **Ajuste de Dimensionamento**: O tamanho do logotipo em `Header.tsx` e `AuthView.tsx` foi ampliado (compensando o padding interno do novo PNG transparente) para melhorar a legibilidade e apelo estético ("premium feel").
+- **Guia do Navegador & PWA (`index.html` + `manifest.webmanifest`)**: Favicon, Apple Touch Icon e manifesto PWA atualizados para utilizar o novo ícone em formato PNG, corrigindo problemas de instalação do PWA em mobile e desktop.
 
 #### 🎙️ Assistente de Lançamento Inteligente por Voz (`src/components/Modals/VoiceTransactionModal.tsx`) [NOVO]
 - **Web Speech API**: Integração nativa com reconhecimento de fala em português (`pt-BR`).

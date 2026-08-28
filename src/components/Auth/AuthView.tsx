@@ -129,8 +129,8 @@ export const AuthView: React.FC = () => {
           src="/icon.png"
           alt="FINTHIGAS Logo"
           style={{
-            width: '72px',
-            height: '72px',
+            width: '84px',
+            height: '84px',
             objectFit: 'contain',
             filter: 'drop-shadow(0 8px 24px rgba(124, 58, 237, 0.5))',
             marginBottom: '12px',
