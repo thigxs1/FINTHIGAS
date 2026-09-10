@@ -29,14 +29,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside className={`sidebar ${isOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <div style={{
-              width: '32px', height: '32px', borderRadius: '8px',
-              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', fontWeight: 'bold', fontSize: '1rem', flexShrink: 0
-            }}>
-              F
-            </div>
+            <img
+              src="/icon-192.png"
+              alt="FINTHIGAS"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                objectFit: 'contain',
+                flexShrink: 0,
+              }}
+            />
             <span className="sidebar-brand-text">FINTHIGAS</span>
           </div>
           {isOpen && (
@@ -96,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ? <PanelLeftOpen size={18} />
               : <PanelLeftClose size={18} />
             }
-            <span className="nav-item-label">Recolher</span>
+            <span className="nav-item-label">{isCollapsed ? 'Expandir' : 'Recolher'}</span>
           </button>
         </div>
       </aside>

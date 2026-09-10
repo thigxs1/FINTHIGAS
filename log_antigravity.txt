@@ -423,3 +423,33 @@ _Última atualização: 2026-09-10 — Sessão 16 (Centralização dos Cards Das
 ---
 
 _Última atualização: 2026-09-10 — Sessão 17 (Substituição de Logo e Nova Identidade Visual Laranja)_
+
+---
+
+### Sessão 18 — Correção da Sidebar Desktop e Ícone Inteiriço no iPhone (Antigravity)
+> Data: 2026-09-10
+
+#### 🖥️ Correção do Menu Lateral Desktop (`Sidebar.tsx`, `src/index.css`)
+- **Correção dos Botões com Fundo Branco na Sidebar Colapsada**:
+  - `button` no reset global agora possui `background: transparent; color: inherit;` impedindo que navegadores injetem o fundo branco (`buttonface`) nativo.
+  - `.nav-item` agora possui `background: transparent; border: 1px solid transparent;`.
+  - Na sidebar colapsada (`.sidebar.collapsed .nav-item`), cada item é um quadrado perfeito e centralizado de 44×44px com `margin: 0 auto;`, sem fundos brancos. O item ativo recebe visual SaaS corporativo com leve brilho laranja (`rgba(243, 112, 30, 0.15)`) e borda sutil (`rgba(243, 112, 30, 0.35)`).
+- **Fixação da Sidebar e Topbar no Desktop (Fim do Scroll Indesejado)**:
+  - No desktop (`min-width: 769px`), `.layout-wrapper` e `.main-wrapper` foram definidos com `height: 100vh; overflow: hidden;`.
+  - A rolagem vertical de transações e cards ocorre exclusivamente dentro de `.content-area` (`overflow-y: auto;`), garantindo que a Sidebar e a Topbar nunca mais sumam ou rolem para fora da tela quando o usuário rolar páginas longas.
+  - No mobile (`max-width: 768px`), o comportamento nativo de rolagem fluida (`height: auto;`) e Topbar estática foi rigorosamente preservado.
+- **Identidade Visual no Header da Sidebar**:
+  - O quadrado genérico com a letra "F" foi substituído pela imagem oficial do novo logo FINTHIGAS (`/icon-192.png`), perfeitamente centralizado em 32×32px quando a sidebar está recolhida.
+  - O botão inferior de recolhimento agora alterna adequadamente o texto entre "Recolher" e "Expandir".
+
+#### 📱 Atalho do iPhone Inteiriço e sem Frestas Brancas (`scripts/generate-icons-png.cjs`, `public/`)
+- **Causa das Frestas Brancas**: O iOS não suporta canais alfa (transparência) nos ícones de atalho da tela inicial (`apple-touch-icon`). Ao encontrar pixels transparentes nos cantos arredondados do PNG original, o Safari iOS preenchia o fundo com branco antes de aplicar a máscara squircle do sistema, gerando as frestas/bordas brancas ao redor do ícone.
+- **Solução Definitiva**:
+  - O script de geração de ícones foi atualizado para aplicar `.flatten({ background: { r: 35, g: 36, b: 42 } })` (`#23242a`, tom escuro do fundo do logo).
+  - `apple-touch-icon.png`, `apple-touch-icon-precomposed.png` e `icon-maskable-512.png` agora possuem 100% de opacidade sólida de ponta a ponta.
+  - O iOS agora aplica sua máscara squircle nativa sobre a imagem inteiriça, resultando em um atalho idêntico ao do desktop PWA: contínuo, escuro e sem qualquer fresta branca.
+
+---
+
+_Última atualização: 2026-09-10 — Sessão 18 (Correção da Sidebar Desktop e Ícone Inteiriço no iPhone)_
+
