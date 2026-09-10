@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { Transaction, TransactionType } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText, ArrowUpDown, Download, ChevronLeft, ChevronRight, Mic } from 'lucide-react';
+import {
+  Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText,
+  ArrowUpDown, Download, ChevronLeft, ChevronRight, Mic, ChevronDown as ChevronDownIcon,
+} from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -22,6 +25,7 @@ export const TransactionsView: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('expense');
   const [viewingReceiptTx, setViewingReceiptTx] = useState<Transaction | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
@@ -43,6 +47,10 @@ export const TransactionsView: React.FC = () => {
     }
   };
 
+  const toggleExpand = (id: string) => {
+    setExpandedId(prev => (prev === id ? null : id));
+  };
+
   // Filter list by search and type
   const filteredList = filteredTransactions.filter((tx) => {
     const matchesType = filterType === 'all' || tx.type === filterType;
@@ -61,7 +69,6 @@ export const TransactionsView: React.FC = () => {
       case 'date_asc':
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       case 'payment_date':
-        // date = data de pagamento informada
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       case 'created_at':
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
@@ -137,55 +144,53 @@ export const TransactionsView: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Top Bar Actions & Filters */}
-      <div className="card" style={{ padding: '16px 24px' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '16px',
-          }}
-        >
-          {/* Search Input */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '200px' }}>
-            <Search size={18} color="var(--text-muted)" />
+      {/* ── Toolbar ─────────────────────────────────────────────── */}
+      <div className="card" style={{ padding: '16px 20px' }}>
+
+        {/* Row 1: search + type filters + sort */}
+        <div className="tx-toolbar-row">
+          {/* Search */}
+          <div className="tx-search-wrapper">
+            <Search size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
             <input
               type="text"
-              placeholder="Buscar por descrição, categoria ou forma de pagamento..."
+              placeholder="Buscar descrição, categoria..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%' }}
+              style={{ width: '100%', padding: '7px 10px' }}
             />
           </div>
 
-          {/* Type Filter Tabs */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Type filter tabs */}
+          <div className="tx-filter-tabs">
             <button
-              className={`btn-secondary ${filterType === 'all' ? 'active' : ''}`}
-              style={{ background: filterType === 'all' ? 'rgba(255, 255, 255, 0.15)' : 'transparent' }}
+              className={`btn-secondary${filterType === 'all' ? ' active' : ''}`}
+              style={{ background: filterType === 'all' ? 'rgba(255,255,255,0.12)' : undefined }}
               onClick={() => setFilterType('all')}
             >
               Todos
             </button>
             <button
-              className={`btn-secondary ${filterType === 'income' ? 'badge-income' : ''}`}
+              className={`btn-secondary${filterType === 'income' ? ' badge-income' : ''}`}
               onClick={() => setFilterType('income')}
+              title="Entradas"
             >
-              Entradas
+              <ArrowUpCircle size={15} />
+              <span className="hide-mobile">Entradas</span>
             </button>
             <button
-              className={`btn-secondary ${filterType === 'expense' ? 'badge-expense' : ''}`}
+              className={`btn-secondary${filterType === 'expense' ? ' badge-expense' : ''}`}
               onClick={() => setFilterType('expense')}
+              title="Saídas"
             >
-              Saídas
+              <ArrowDownCircle size={15} />
+              <span className="hide-mobile">Saídas</span>
             </button>
           </div>
 
-          {/* Sort Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ArrowUpDown size={15} color="var(--text-muted)" />
+          {/* Sort */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <ArrowUpDown size={14} color="var(--text-muted)" style={{ flexShrink: 0 }} />
             <select
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value as SortOption)}
@@ -197,53 +202,78 @@ export const TransactionsView: React.FC = () => {
                 padding: '6px 10px',
                 fontSize: '0.83rem',
                 cursor: 'pointer',
+                width: 'auto',
               }}
             >
               <option value="date_desc">Mais Recente</option>
               <option value="date_asc">Mais Antigo</option>
-              <option value="abc">A → Z (Descrição)</option>
-              <option value="payment_date">Data de Pagamento</option>
-              <option value="created_at">Data de Registro</option>
+              <option value="abc">A → Z</option>
+              <option value="payment_date">Data Pagamento</option>
+              <option value="created_at">Data Registro</option>
             </select>
           </div>
+        </div>
 
-          {/* New Transaction Buttons & Export */}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button
-              className="btn-primary"
-              style={{
-                background: 'var(--accent-primary)',
-                boxShadow: 'var(--shadow-sm)',
-              }}
-              onClick={() => setIsVoiceModalOpen(true)}
-              title="Lançamento Rápido por Voz"
-            >
-              <Mic size={16} /> <span>Lançar por Voz</span>
-            </button>
-            <button className="btn-secondary" style={{ padding: '8px 12px', gap: '6px' }} onClick={handleExportCSV} title="Exportar CSV">
-              <Download size={16} /> <span className="hide-mobile">CSV</span>
-            </button>
-            <button className="btn-secondary" style={{ padding: '8px 12px', gap: '6px' }} onClick={handleExportPDF} title="Exportar PDF">
-              <Download size={16} /> <span className="hide-mobile">PDF</span>
-            </button>
-            <button className="btn-primary" style={{ background: '#10b981' }} onClick={() => handleOpenNew('income')}>
-              <Plus size={16} /> <span className="hide-mobile">Nova Entrada</span>
-            </button>
-            <button className="btn-primary" style={{ background: '#f43f5e' }} onClick={() => handleOpenNew('expense')}>
-              <Plus size={16} /> <span className="hide-mobile">Nova Saída</span>
-            </button>
-          </div>
+        {/* Row 2: action buttons */}
+        <div className="tx-action-row">
+          <button
+            className="btn-primary tx-action-btn"
+            style={{ background: 'var(--accent-primary)' }}
+            onClick={() => setIsVoiceModalOpen(true)}
+            title="Lançar por Voz"
+          >
+            <Mic size={16} />
+            <span className="hide-mobile">Voz</span>
+          </button>
+
+          <button
+            className="btn-secondary tx-action-btn"
+            onClick={handleExportCSV}
+            title="Exportar CSV"
+          >
+            <Download size={15} />
+            <span className="hide-mobile">CSV</span>
+          </button>
+
+          <button
+            className="btn-secondary tx-action-btn"
+            onClick={handleExportPDF}
+            title="Exportar PDF"
+          >
+            <FileText size={15} />
+            <span className="hide-mobile">PDF</span>
+          </button>
+
+          <button
+            className="btn-primary tx-action-btn"
+            style={{ background: '#10b981', flex: 1 }}
+            onClick={() => handleOpenNew('income')}
+            title="Nova Entrada"
+          >
+            <Plus size={16} />
+            <span>Nova Entrada</span>
+          </button>
+
+          <button
+            className="btn-primary tx-action-btn"
+            style={{ background: '#f43f5e', flex: 1 }}
+            onClick={() => handleOpenNew('expense')}
+            title="Nova Saída"
+          >
+            <Plus size={16} />
+            <span>Nova Saída</span>
+          </button>
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="card custom-table-container">
+      {/* ── Desktop Table ─────────────────────────────────────── */}
+      <div className="card custom-table-container desktop-only-table">
         <table className="custom-table">
           <thead>
             <tr>
               <th>Tipo</th>
               <th>Descrição</th>
-              <th>Categoria & Subcategoria</th>
+              <th>Categoria &amp; Subcategoria</th>
               <th>Data</th>
               <th>Pagamento</th>
               <th style={{ textAlign: 'right' }}>Valor</th>
@@ -281,14 +311,7 @@ export const TransactionsView: React.FC = () => {
                     </td>
                     <td>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <span
-                          style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            backgroundColor: cat?.color || '#64748b',
-                          }}
-                        />
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat?.color || '#64748b', flexShrink: 0 }} />
                         {cat?.name || 'Sem Categoria'}
                       </span>
                       {sub && <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}> • {sub.name}</span>}
@@ -305,17 +328,17 @@ export const TransactionsView: React.FC = () => {
                         {tx.receipt_url && (
                           <button
                             className="btn-secondary"
-                            style={{ padding: '6px', color: '#7c3aed', borderColor: 'rgba(124, 58, 237, 0.4)' }}
+                            style={{ padding: '6px', color: '#7c3aed', borderColor: 'rgba(124,58,237,0.4)' }}
                             onClick={() => setViewingReceiptTx(tx)}
-                            title="Ver Comprovante de Pagamento"
+                            title="Ver Comprovante"
                           >
                             <FileText size={14} />
                           </button>
                         )}
-                        <button className="btn-secondary" style={{ padding: '6px' }} onClick={() => handleEdit(tx)}>
+                        <button className="btn-secondary" style={{ padding: '6px' }} onClick={() => handleEdit(tx)} title="Editar">
                           <Edit2 size={14} />
                         </button>
-                        <button className="btn-danger" style={{ padding: '6px' }} onClick={() => handleDelete(tx.id)}>
+                        <button className="btn-danger" style={{ padding: '6px' }} onClick={() => handleDelete(tx.id)} title="Excluir">
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -326,6 +349,128 @@ export const TransactionsView: React.FC = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* ── Mobile Card List ──────────────────────────────────── */}
+      <div className="tx-card-list">
+        {paginatedTransactions.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Nenhum lançamento encontrado para os filtros selecionados.
+          </div>
+        ) : (
+          paginatedTransactions.map((tx) => {
+            const cat = categories.find((c) => c.id === tx.category_id);
+            const sub = cat?.subcategories?.find((s) => s.id === tx.subcategory_id);
+            const isExpanded = expandedId === tx.id;
+            const isIncome = tx.type === 'income';
+
+            return (
+              <div key={tx.id} className={`tx-card${isExpanded ? ' expanded' : ''}`}>
+                {/* Summary row — always visible, click to expand */}
+                <button className="tx-card-summary" onClick={() => toggleExpand(tx.id)}>
+                  {/* Left: type icon + description + category */}
+                  <div className="tx-card-main">
+                    <div className="tx-card-icon" style={{ color: isIncome ? '#10b981' : '#f43f5e' }}>
+                      {isIncome ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
+                    </div>
+                    <div className="tx-card-info">
+                      <span className="tx-card-description">{tx.description}</span>
+                      <span className="tx-card-meta">
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: '7px', height: '7px',
+                            borderRadius: '50%',
+                            backgroundColor: cat?.color || '#64748b',
+                            marginRight: '4px',
+                          }}
+                        />
+                        {cat?.name || 'Sem Categoria'}
+                        <span style={{ margin: '0 4px', opacity: 0.4 }}>·</span>
+                        {formatDate(tx.date)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right: value + chevron */}
+                  <div className="tx-card-right">
+                    <span className="tx-card-amount" style={{ color: isIncome ? '#10b981' : '#f43f5e' }}>
+                      {isIncome ? '+' : '-'} {formatCurrency(Number(tx.amount))}
+                    </span>
+                    <ChevronDownIcon
+                      size={16}
+                      style={{
+                        color: 'var(--text-muted)',
+                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                        flexShrink: 0,
+                      }}
+                    />
+                  </div>
+                </button>
+
+                {/* Detail panel — visible when expanded */}
+                {isExpanded && (
+                  <div className="tx-card-detail">
+                    <div className="tx-card-detail-grid">
+                      {sub && (
+                        <div className="tx-card-detail-row">
+                          <span className="tx-detail-label">Subcategoria</span>
+                          <span className="tx-detail-value">{sub.name}</span>
+                        </div>
+                      )}
+                      <div className="tx-card-detail-row">
+                        <span className="tx-detail-label">Pagamento</span>
+                        <span className="tx-detail-value">{tx.payment_method || 'Pix'}</span>
+                      </div>
+                      <div className="tx-card-detail-row">
+                        <span className="tx-detail-label">Status</span>
+                        <span className="tx-detail-value">
+                          <span className={`badge ${tx.is_paid ? 'badge-income' : 'badge-warning'}`}>
+                            {tx.is_paid ? 'Pago' : 'Pendente'}
+                          </span>
+                        </span>
+                      </div>
+                      {tx.notes && (
+                        <div className="tx-card-detail-row">
+                          <span className="tx-detail-label">Observações</span>
+                          <span className="tx-detail-value">{tx.notes}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="tx-card-actions">
+                      {tx.receipt_url && (
+                        <button
+                          className="btn-secondary"
+                          style={{ flex: 1, justifyContent: 'center', color: '#7c3aed', borderColor: 'rgba(124,58,237,0.3)' }}
+                          onClick={() => setViewingReceiptTx(tx)}
+                        >
+                          <FileText size={15} /> Comprovante
+                        </button>
+                      )}
+                      <button
+                        className="btn-secondary"
+                        style={{ flex: 1, justifyContent: 'center' }}
+                        onClick={() => handleEdit(tx)}
+                      >
+                        <Edit2 size={15} /> Editar
+                      </button>
+                      <button
+                        className="btn-danger"
+                        style={{ flex: 1, justifyContent: 'center' }}
+                        onClick={() => handleDelete(tx.id)}
+                      >
+                        <Trash2 size={15} /> Excluir
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Pagination Controls */}

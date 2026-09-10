@@ -687,3 +687,255 @@ select option {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================================
+   SIDEBAR FOOTER & COLLAPSE TOGGLE
+================================ */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-collapse-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar.collapsed .sidebar-collapse-btn {
+  justify-content: center;
+  padding: 10px;
+}
+
+/* desktop-only helper — hides on mobile (sidebar already uses fixed/offcanvas) */
+.desktop-only {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* ================================
+   TRANSACTIONS TOOLBAR (responsive)
+================================ */
+.tx-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tx-search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.tx-filter-tabs {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tx-action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tx-action-btn {
+  flex-shrink: 0;
+}
+
+/* On mobile, keep action row tidy */
+@media (max-width: 768px) {
+  .tx-toolbar-row {
+    gap: 8px;
+  }
+  .tx-action-row {
+    gap: 6px;
+  }
+  .tx-action-btn {
+    padding: 8px 10px;
+    font-size: 0.82rem;
+  }
+}
+
+/* ================================
+   MOBILE TRANSACTION CARD LIST
+================================ */
+/* Desktop: show table, hide card list */
+.desktop-only-table {
+  display: block;
+}
+.tx-card-list {
+  display: none;
+}
+
+/* Mobile: hide table, show card list */
+@media (max-width: 768px) {
+  .desktop-only-table {
+    display: none !important;
+  }
+  .tx-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.tx-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.tx-card.expanded {
+  border-color: var(--border-highlight);
+}
+
+.tx-card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  gap: 12px;
+  text-align: left;
+}
+
+.tx-card-summary:active {
+  background: rgba(255,255,255,0.02);
+}
+
+.tx-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tx-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tx-card-description {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-card-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-card-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tx-card-amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tx-card-detail {
+  border-top: 1px solid var(--border-color);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(0,0,0,0.15);
+}
+
+.tx-card-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tx-card-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.tx-detail-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.tx-detail-value {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.tx-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tx-card-actions .btn-secondary,
+.tx-card-actions .btn-danger {
+  flex: 1;
+  justify-content: center;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+}
+

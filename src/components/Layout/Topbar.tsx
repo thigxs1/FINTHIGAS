@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
-import { ChevronDown, Database, CheckCircle2, AlertTriangle, RefreshCw, Trash2, LogOut, User, Menu } from 'lucide-react';
+import { ChevronDown, Database, RefreshCw, Trash2, LogOut, User, Menu } from 'lucide-react';
 import { getMonthName } from '../../utils/formatters';
 
 interface TopbarProps {
@@ -75,22 +75,20 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
       </div>
 
       <div className="topbar-right">
-        {/* Supabase Status Badge */}
+        {/* Supabase Status — icon-only, color indicates status */}
         <div
-          className="badge badge-neutral"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px' }}
+          className="badge badge-neutral topbar-status-icon"
           title={
             supabaseConnected
               ? 'Conectado ao Supabase — dados em nuvem sincronizados'
-              : 'Modo Local: execute o supabase_schema.sql no painel do Supabase para ativar a nuvem'
+              : 'Modo Local (Offline): execute o supabase_schema.sql no painel do Supabase para ativar a nuvem'
           }
+          style={{ padding: '7px', lineHeight: 0 }}
         >
-          <Database size={13} style={{ color: supabaseConnected ? 'var(--accent-income)' : 'var(--accent-warning)', flexShrink: 0 }} />
-          <span className="hide-mobile">{supabaseConnected ? 'Supabase Ativo' : 'Local (Offline)'}</span>
-          {supabaseConnected
-            ? <CheckCircle2 size={12} color="var(--accent-income)" />
-            : <AlertTriangle size={12} color="var(--accent-warning)" />
-          }
+          <Database
+            size={15}
+            style={{ color: supabaseConnected ? 'var(--accent-income)' : 'var(--accent-warning)' }}
+          />
         </div>
 
         {/* Reset Dropdown */}

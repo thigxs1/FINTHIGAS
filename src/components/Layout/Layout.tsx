@@ -12,17 +12,21 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
+  const toggleCollapse = () => setIsCollapsed(prev => !prev);
 
   return (
     <div className="layout-wrapper">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onClose={closeSidebar} 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={closeSidebar}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={toggleCollapse}
       />
       
       <div className="main-wrapper">
