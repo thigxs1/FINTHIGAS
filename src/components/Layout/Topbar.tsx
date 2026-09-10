@@ -1,12 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useFinance } from '../context/FinanceContext';
-import { useAuth } from '../context/AuthContext';
-import { ChevronDown, Database, CheckCircle2, AlertTriangle, RefreshCw, Trash2, LogOut, User } from 'lucide-react';
-import { getMonthName } from '../utils/formatters';
+import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
+import { ChevronDown, Database, CheckCircle2, AlertTriangle, RefreshCw, Trash2, LogOut, User, Menu } from 'lucide-react';
+import { getMonthName } from '../../utils/formatters';
 
-export const Header: React.FC = () => {
+interface TopbarProps {
+  onToggleSidebar: () => void;
+}
+
+export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
   const { periodFilter, setPeriodFilter, supabaseConnected, resetToMockData, resetToBlank } = useFinance();
   const { user, signOut } = useAuth();
+  
   const [showResetMenu, setShowResetMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const resetRef = useRef<HTMLDivElement>(null);
@@ -47,57 +52,44 @@ export const Header: React.FC = () => {
   const years = [2024, 2025, 2026, 2027];
 
   return (
-    <header className="app-header glass-card">
-      {/* Brand */}
-      <div className="brand-logo">
-        <img
-          src="/logo_pwa.svg"
-          alt="FINTHIGAS"
-          style={{
-            width: '54px',
-            height: '54px',
-            objectFit: 'contain',
-            filter: 'drop-shadow(0 4px 14px rgba(124, 58, 237, 0.45))',
-            flexShrink: 0,
-          }}
-        />
-        <div>
-          <h1 className="brand-title">FINTHIGAS</h1>
-          <p className="brand-subtitle">Gestão Financeira & Controle de Gastos</p>
-        </div>
-      </div>
-
-      {/* Right side actions */}
-      <div className="header-actions">
+    <header className="topbar">
+      <div className="topbar-left">
+        <button className="menu-toggle" onClick={onToggleSidebar} aria-label="Abrir menu">
+          <Menu size={24} />
+        </button>
+        
         {/* Period Filters */}
-        <div className="header-filters">
-          <select value={periodFilter.month} onChange={handleMonthChange}>
+        <div className="header-filters" style={{ display: 'flex', gap: '8px' }}>
+          <select value={periodFilter.month} onChange={handleMonthChange} style={{ width: 'auto', padding: '6px 10px', fontSize: '0.85rem' }}>
             <option value={0}>Ano Inteiro</option>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
               <option key={m} value={m}>{getMonthName(m)}</option>
             ))}
           </select>
-          <select value={periodFilter.year} onChange={handleYearChange}>
+          <select value={periodFilter.year} onChange={handleYearChange} style={{ width: 'auto', padding: '6px 10px', fontSize: '0.85rem' }}>
             {years.map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
         </div>
+      </div>
 
+      <div className="topbar-right">
         {/* Supabase Status Badge */}
         <div
-          className="status-badge"
+          className="badge badge-neutral"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px' }}
           title={
             supabaseConnected
               ? 'Conectado ao Supabase — dados em nuvem sincronizados'
               : 'Modo Local: execute o supabase_schema.sql no painel do Supabase para ativar a nuvem'
           }
         >
-          <Database size={13} style={{ color: supabaseConnected ? '#10b981' : '#f59e0b', flexShrink: 0 }} />
-          <span>{supabaseConnected ? 'Supabase Ativo' : 'Local (Offline)'}</span>
+          <Database size={13} style={{ color: supabaseConnected ? 'var(--accent-income)' : 'var(--accent-warning)', flexShrink: 0 }} />
+          <span className="hide-mobile">{supabaseConnected ? 'Supabase Ativo' : 'Local (Offline)'}</span>
           {supabaseConnected
-            ? <CheckCircle2 size={12} color="#10b981" />
-            : <AlertTriangle size={12} color="#f59e0b" />
+            ? <CheckCircle2 size={12} color="var(--accent-income)" />
+            : <AlertTriangle size={12} color="var(--accent-warning)" />
           }
         </div>
 
@@ -106,18 +98,19 @@ export const Header: React.FC = () => {
           <button
             ref={btnRef}
             className="btn-secondary"
-            style={{ padding: '8px 10px', gap: '4px' }}
+            style={{ padding: '6px 10px', gap: '4px' }}
             onClick={handleToggleMenu}
             title="Opções de Reset de Dados"
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={14} />
             <ChevronDown size={12} />
           </button>
 
           {showResetMenu && (
-            <div className="reset-dropdown-menu" style={{ top: dropdownTop }}>
+            <div className="reset-dropdown-menu" style={{ top: dropdownTop, right: 0 }}>
               <button
                 className="reset-dropdown-item"
+                style={{ padding: '12px 16px', background: 'none', border: 'none', borderBottom: '1px solid var(--border-color)', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--text-primary)' }}
                 onClick={() => {
                   setShowResetMenu(false);
                   if (confirm('Resetar para os dados de demonstração originais?')) {
@@ -125,11 +118,12 @@ export const Header: React.FC = () => {
                   }
                 }}
               >
-                <strong>🔄 Restaurar Demonstração</strong>
-                <small>Volta aos dados de exemplo iniciais</small>
+                <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>🔄 Restaurar Demonstração</div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Volta aos dados de exemplo iniciais</div>
               </button>
               <button
                 className="reset-dropdown-item"
+                style={{ padding: '12px 16px', background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
                 onClick={() => {
                   setShowResetMenu(false);
                   if (confirm('⚠️ Isso apagará TODOS os dados. Deseja começar do zero?')) {
@@ -137,11 +131,10 @@ export const Header: React.FC = () => {
                   }
                 }}
               >
-                <strong style={{ color: '#f43f5e' }}>
-                  <Trash2 size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
-                  Limpar Tudo (Blank)
-                </strong>
-                <small>Apaga todos os registros e categorias</small>
+                <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--accent-expense)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Trash2 size={14} /> Limpar Tudo (Blank)
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Apaga todos os registros e categorias</div>
               </button>
             </div>
           )}
@@ -156,59 +149,57 @@ export const Header: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                background: 'rgba(124, 58, 237, 0.15)',
-                border: '1px solid rgba(124, 58, 237, 0.35)',
-                borderRadius: '20px',
-                padding: '5px 10px 5px 5px',
+                gap: '8px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '24px',
+                padding: '4px 12px 4px 4px',
                 cursor: 'pointer',
-                color: '#c4b5fd',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                transition: 'all 0.2s',
+                color: 'var(--text-primary)',
+                fontSize: '0.85rem',
+                fontWeight: 500,
               }}
             >
               <div style={{
-                width: '26px', height: '26px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: 'var(--accent-secondary)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.7rem', fontWeight: 800, color: 'white', flexShrink: 0,
+                fontSize: '0.75rem', fontWeight: 700, color: 'white', flexShrink: 0,
               }}>
                 {userInitials}
               </div>
-              <span style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="hide-mobile" style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user.user_metadata?.full_name || user.email?.split('@')[0]}
               </span>
-              <ChevronDown size={12} />
+              <ChevronDown size={14} className="hide-mobile" />
             </button>
 
             {showUserMenu && (
-              <div className="reset-dropdown-menu" style={{ top: 44, right: 0, left: 'auto', minWidth: '200px' }}>
-                <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <User size={14} color="var(--text-muted)" />
+              <div className="reset-dropdown-menu" style={{ top: 'calc(100% + 8px)', right: 0, minWidth: '220px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)' }}>
+                <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <User size={16} color="var(--text-muted)" />
                     <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                         {user.user_metadata?.full_name || 'Usuário'}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {user.email}
                       </div>
                     </div>
                   </div>
                 </div>
                 <button
-                  className="reset-dropdown-item"
                   onClick={async () => {
                     setShowUserMenu(false);
                     if (confirm('Deseja sair da sua conta?')) await signOut();
                   }}
-                  style={{ color: '#f43f5e' }}
+                  style={{ width: '100%', textAlign: 'left', padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px' }}
                 >
-                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f43f5e' }}>
-                    <LogOut size={13} /> Sair da Conta
-                  </strong>
-                  <small style={{ color: 'var(--text-muted)' }}>Encerrar sessão atual</small>
+                  <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--accent-expense)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <LogOut size={14} /> Sair da Conta
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Encerrar sessão atual</div>
                 </button>
               </div>
             )}

@@ -138,7 +138,7 @@ export const TransactionsView: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Top Bar Actions & Filters */}
-      <div className="glass-card" style={{ padding: '16px 24px' }}>
+      <div className="card" style={{ padding: '16px 24px' }}>
         <div
           style={{
             display: 'flex',
@@ -212,8 +212,8 @@ export const TransactionsView: React.FC = () => {
             <button
               className="btn-primary"
               style={{
-                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                boxShadow: '0 4px 14px rgba(124, 58, 237, 0.35)',
+                background: 'var(--accent-primary)',
+                boxShadow: 'var(--shadow-sm)',
               }}
               onClick={() => setIsVoiceModalOpen(true)}
               title="Lançamento Rápido por Voz"
@@ -237,7 +237,7 @@ export const TransactionsView: React.FC = () => {
       </div>
 
       {/* Transactions Table */}
-      <div className="glass-card custom-table-container">
+      <div className="card custom-table-container">
         <table className="custom-table">
           <thead>
             <tr>
