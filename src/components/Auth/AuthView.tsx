@@ -120,19 +120,20 @@ export const AuthView: React.FC = () => {
         justifyContent: 'center',
         padding: '20px',
         background:
-          'radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.12) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.08) 0px, transparent 50%)',
+          'radial-gradient(at 0% 0%, rgba(232, 84, 26, 0.10) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(138, 180, 212, 0.07) 0px, transparent 50%)',
       }}
     >
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <img
-          src="/logo_pwa.svg"
+          src="/icon-512.png"
           alt="FINTHIGAS Logo"
           style={{
             width: '96px',
             height: '96px',
             objectFit: 'contain',
-            filter: 'drop-shadow(0 8px 24px rgba(124, 58, 237, 0.5))',
+            borderRadius: '20px',
+            filter: 'drop-shadow(0 8px 24px rgba(232, 84, 26, 0.4))',
             marginBottom: '12px',
           }}
         />
@@ -142,7 +143,7 @@ export const AuthView: React.FC = () => {
             fontSize: '1.8rem',
             fontWeight: 800,
             letterSpacing: '-0.04em',
-            background: 'linear-gradient(135deg, #e2e8f0, #7c3aed)',
+            background: 'linear-gradient(135deg, #e2e8f0, #e8541a)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             margin: 0,
@@ -179,12 +180,12 @@ export const AuthView: React.FC = () => {
                 style={{
                   padding: '14px',
                   border: 'none',
-                  background: tab === t ? 'rgba(124, 58, 237, 0.12)' : 'transparent',
-                  color: tab === t ? '#c4b5fd' : 'var(--text-muted)',
+                  background: tab === t ? 'rgba(232, 84, 26, 0.12)' : 'transparent',
+                  color: tab === t ? '#f9a87a' : 'var(--text-muted)',
                   fontWeight: tab === t ? 700 : 400,
                   fontSize: '0.88rem',
                   cursor: 'pointer',
-                  borderBottom: tab === t ? '2px solid #7c3aed' : '2px solid transparent',
+                  borderBottom: tab === t ? '2px solid #e8541a' : '2px solid transparent',
                   transition: 'all 0.2s',
                 }}
               >

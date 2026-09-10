@@ -364,3 +364,62 @@ npm run build
 
 _Última atualização: 2026-09-10 — Sessão 16 (Centralização dos Cards Dashboard e Botão de Relevância Ícone-Único)_
 
+---
+
+### Sessão 17 — Substituição de Logo e Nova Identidade Visual (Antigravity)
+> Data: 2026-09-10
+
+#### 🎨 Novo Logo e Identidade Visual (`LOGO-FINTHIGAS.png`)
+- **Fonte**: O arquivo `LOGO-FINTHIGAS.png` (1024×1024, fundo escuro, "F" em laranja `#e8541a` + azul `#8ab4d4`) foi fornecido pelo usuário e adicionado à raiz do projeto.
+- **Paleta extraída**: Laranja primário `#e8541a`, laranja escuro `#c94415`, azul acinzentado `#8ab4d4`, fundo dark `#1a1a20`.
+
+#### 🖼️ Geração dos Assets de Ícone
+- **Script criado**: `scripts/generate-icons-png.cjs` — lê `LOGO-FINTHIGAS.png` via `sharp` e gera todos os tamanhos necessários.
+- **Arquivos gerados/atualizados em `public/`**:
+  - `icon-512.png` (512×512) — PWA Android/Tela inicial
+  - `icon-192.png` (192×192) — PWA Android pequeno
+  - `icon-maskable-512.png` (512×512) — PWA Maskable (para Android Adaptive Icons)
+  - `apple-touch-icon.png` (180×180) — Atalho iPhone
+  - `apple-touch-icon-precomposed.png` (180×180) — Atalho iPhone (legado)
+  - `favicon-48x48.png`, `favicon-32x32.png`, `favicon-16x16.png` — Favicons multi-resolução
+  - `favicon.ico` — Favicon padrão (32×32)
+  - `icon.png`, `logo.png`, `pwa-icon.png` — Cópias auxiliares
+  - `src/assets/icon.png` — Cópia para consumo interno pelo React
+
+#### 📄 Arquivos Atualizados
+
+**`index.html`**:
+- Removida referência ao SVG antigo (`/logo_pwa.svg`) como favicon.
+- Adicionados `favicon.ico` e `favicon-48x48.png`.
+- `theme-color` alterado de `#7c3aed` (roxo) para `#e8541a` (laranja).
+
+**`public/manifest.webmanifest`**:
+- `theme_color` atualizado de `#7c3aed` → `#e8541a`.
+- `background_color` atualizado de `#0a0a0f` → `#1a1a20`.
+- Removida entrada do SVG (`logo_pwa.svg`).
+- Adicionado ícone maskable dedicado (`/icon-maskable-512.png`).
+
+**`src/components/Auth/AuthView.tsx`**:
+- Logo de login atualizado de `/logo_pwa.svg` → `/icon-512.png` com `borderRadius: '20px'`.
+- Drop-shadow de `rgba(124,58,237)` → `rgba(232,84,26)`.
+- Gradiente do título `FINTHIGAS` de `#7c3aed` → `#e8541a`.
+- Radial gradient de fundo de roxo → laranja.
+- Tabs ativas: cor de `#c4b5fd` → `#f9a87a`, borda de `#7c3aed` → `#e8541a`.
+
+**`src/components/Transactions/TransactionsView.tsx`**:
+- Botões de comprovante (desktop e mobile): cor e borda de roxo → laranja `#e8541a`.
+
+**`src/components/Modals/ReceiptViewerModal.tsx`**:
+- Ícone FileText: cor de `#7c3aed` → `#e8541a`.
+
+**`src/components/Modals/VoiceTransactionModal.tsx`**:
+- Header do modal: gradiente de fundo de roxo/índigo → laranja.
+- Estado de processamento: círculo de borda e Loader2 de roxo → laranja.
+- Botão do microfone (idle): gradiente de roxo/índigo → laranja.
+
+**`src/components/ErrorBoundary.tsx`**:
+- Botão de recarga: gradiente de `#7c3aed/#6d28d9` → `#e8541a/#c94415`.
+
+---
+
+_Última atualização: 2026-09-10 — Sessão 17 (Substituição de Logo e Nova Identidade Visual Laranja)_

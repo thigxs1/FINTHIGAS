@@ -61,7 +61,7 @@ export const ReceiptViewerModal: React.FC<ReceiptViewerModalProps> = ({ transact
                 textAlign: 'center',
               }}
             >
-              <FileText size={56} color="#7c3aed" style={{ marginBottom: '12px' }} />
+              <FileText size={56} color="#e8541a" style={{ marginBottom: '12px' }} />
               <span style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '4px' }}>
                 {transaction.receipt_name || 'Comprovante_Pagamento.pdf'}
               </span>

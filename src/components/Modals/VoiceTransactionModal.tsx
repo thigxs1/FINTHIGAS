@@ -254,11 +254,11 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
                 width: '32px',
                 height: '32px',
                 borderRadius: '8px',
-                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                background: 'linear-gradient(135deg, #e8541a, #c94415)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)',
+                boxShadow: '0 4px 12px rgba(232, 84, 26, 0.4)',
               }}
             >
               <Sparkles size={18} color="#ffffff" />
@@ -369,15 +369,15 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
                   width: '80px',
                   height: '80px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(79, 70, 229, 0.2))',
-                  border: '2px solid #7c3aed',
+                  background: 'linear-gradient(135deg, rgba(232, 84, 26, 0.15), rgba(138, 180, 212, 0.15))',
+                  border: '2px solid #e8541a',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   animation: 'pulse 1.5s infinite',
                 }}
               >
-                <Loader2 size={40} color="#a78bfa" className="spin-animation" style={{ animation: 'spin 1s linear infinite' }} />
+                <Loader2 size={40} color="#e8541a" className="spin-animation" style={{ animation: 'spin 1s linear infinite' }} />
               </div>
               <div>
                 <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', color: 'var(--text-primary)' }}>
@@ -415,7 +415,7 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
                     border: 'none',
                     background: isRecording
                       ? 'linear-gradient(135deg, #f43f5e, #e11d48)'
-                      : 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                      : 'linear-gradient(135deg, #e8541a, #c94415)',
                     color: 'white',
                     display: 'flex',
                     alignItems: 'center',
@@ -423,7 +423,7 @@ export const VoiceTransactionModal: React.FC<VoiceTransactionModalProps> = ({ is
                     cursor: 'pointer',
                     boxShadow: isRecording
                       ? '0 0 35px rgba(244, 63, 94, 0.6)'
-                      : '0 10px 28px rgba(124, 58, 237, 0.45)',
+                      : '0 10px 28px rgba(232, 84, 26, 0.45)',
                     transition: 'all 0.25s ease',
                     zIndex: 2,
                   }}

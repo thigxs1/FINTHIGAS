@@ -7,8 +7,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0a0a0f",
-  "theme_color": "#7c3aed",
+  "background_color": "#1a1a20",
+  "theme_color": "#e8541a",
   "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {
@@ -24,16 +24,10 @@
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/logo_pwa.svg",
-      "sizes": "1720x1720",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ]
 }

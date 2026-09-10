@@ -349,7 +349,7 @@ export const TransactionsView: React.FC = () => {
                         {tx.receipt_url && (
                           <button
                             className="btn-secondary"
-                            style={{ padding: '6px', color: '#7c3aed', borderColor: 'rgba(124,58,237,0.4)' }}
+                            style={{ padding: '6px', color: '#e8541a', borderColor: 'rgba(232,84,26,0.4)' }}
                             onClick={() => setViewingReceiptTx(tx)}
                             title="Ver Comprovante"
                           >
@@ -465,7 +465,7 @@ export const TransactionsView: React.FC = () => {
                       {tx.receipt_url && (
                         <button
                           className="btn-secondary"
-                          style={{ flex: 1, justifyContent: 'center', color: '#7c3aed', borderColor: 'rgba(124,58,237,0.3)' }}
+                          style={{ flex: 1, justifyContent: 'center', color: '#e8541a', borderColor: 'rgba(232,84,26,0.3)' }}
                           onClick={() => setViewingReceiptTx(tx)}
                         >
                           <FileText size={15} /> Comprovante
