@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
-import { TabType } from '../Navigation'; // We'll adapt this later if needed, or define TabType here.
-
-// For now, let's redefine TabType here or import it from App.tsx/Navigation.tsx
+// For now, let's redefine TabType here
 export type TabType = 'dashboard' | 'transactions' | 'scheduled' | 'categories';
 
 interface LayoutProps {

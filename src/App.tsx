@@ -8,7 +8,7 @@ import { ScheduledView } from './components/Scheduled/ScheduledView';
 import { CategoriesView } from './components/Categories/CategoriesView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthView } from './components/Auth/AuthView';
-import { AlertTriangle, X, Loader2, Mic, CalendarAlert } from 'lucide-react';
+import { X, Loader2, Mic, CalendarClock } from 'lucide-react';
 import { VoiceTransactionModal } from './components/Modals/VoiceTransactionModal';
 
 const VALID_TABS: TabType[] = ['dashboard', 'transactions', 'scheduled', 'categories'];
@@ -66,7 +66,7 @@ function AppContent() {
       {!hideNotification && pendingScheduled.length > 0 && (
         <div className="alert-banner">
           <div className="alert-content">
-            <CalendarAlert size={18} />
+            <CalendarClock size={18} />
             <span>
               Você tem <strong>{pendingScheduled.length}</strong> conta(s) programada(s) vencendo hoje ou atrasada(s).
               <button 

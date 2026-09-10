@@ -1,6 +1,6 @@
 import React from 'react';
 import { LayoutDashboard, ArrowLeftRight, CalendarClock, Tags, X } from 'lucide-react';
-import { TabType } from './Layout';
+import type { TabType } from './Layout';
 
 interface SidebarProps {
   isOpen: boolean;
