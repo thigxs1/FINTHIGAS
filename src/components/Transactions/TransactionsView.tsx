@@ -5,6 +5,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
   Plus, Search, Edit2, Trash2, ArrowUpCircle, ArrowDownCircle, FileText,
   ArrowUpDown, Download, ChevronLeft, ChevronRight, Mic, ChevronDown as ChevronDownIcon,
+  X,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -145,11 +146,30 @@ export const TransactionsView: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* ── Toolbar ─────────────────────────────────────────────── */}
-      <div className="card" style={{ padding: '16px 20px' }}>
+      <div className="card tx-toolbar-card">
+        {/* Mobile-only primary actions: 2-column grid on top */}
+        <div className="tx-create-group-mobile hide-desktop">
+          <button
+            className="tx-btn-income"
+            onClick={() => handleOpenNew('income')}
+            title="Nova Entrada"
+          >
+            <Plus size={16} />
+            <span>Nova Entrada</span>
+          </button>
+          <button
+            className="tx-btn-expense"
+            onClick={() => handleOpenNew('expense')}
+            title="Nova Saída"
+          >
+            <Plus size={16} />
+            <span>Nova Saída</span>
+          </button>
+        </div>
 
-        {/* Row 1: search + type filters + sort */}
-        <div className="tx-toolbar-row">
-          {/* Search */}
+        {/* Row: Search + Quick Utilities (Voz, CSV, PDF) + Desktop Create Buttons */}
+        <div className="tx-toolbar-top">
+          {/* Search Bar */}
           <div className="tx-search-wrapper">
             <Search size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
             <input
@@ -157,53 +177,105 @@ export const TransactionsView: React.FC = () => {
               placeholder="Buscar descrição, categoria..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%', padding: '7px 10px' }}
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+                title="Limpar busca"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          {/* Type filter tabs */}
+          {/* Utility Tools */}
+          <div className="tx-utility-group">
+            <button
+              className="tx-tool-btn"
+              onClick={() => setIsVoiceModalOpen(true)}
+              title="Lançar por Voz"
+            >
+              <Mic size={16} color="var(--accent-primary)" />
+              <span className="hide-mobile">Voz</span>
+            </button>
+
+            <button
+              className="tx-tool-btn"
+              onClick={handleExportCSV}
+              title="Exportar CSV"
+            >
+              <Download size={15} />
+              <span className="hide-mobile">CSV</span>
+            </button>
+
+            <button
+              className="tx-tool-btn"
+              onClick={handleExportPDF}
+              title="Exportar PDF"
+            >
+              <FileText size={15} />
+              <span className="hide-mobile">PDF</span>
+            </button>
+          </div>
+
+          {/* Desktop Primary Actions */}
+          <div className="tx-create-group hide-mobile">
+            <button
+              className="tx-btn-income"
+              onClick={() => handleOpenNew('income')}
+              title="Nova Entrada"
+            >
+              <Plus size={16} />
+              <span>Nova Entrada</span>
+            </button>
+            <button
+              className="tx-btn-expense"
+              onClick={() => handleOpenNew('expense')}
+              title="Nova Saída"
+            >
+              <Plus size={16} />
+              <span>Nova Saída</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Row: Type filter tabs + Sort */}
+        <div className="tx-toolbar-bottom">
+          {/* Type filter segmented tabs */}
           <div className="tx-filter-tabs">
             <button
-              className={`btn-secondary${filterType === 'all' ? ' active' : ''}`}
-              style={{ background: filterType === 'all' ? 'rgba(255,255,255,0.12)' : undefined }}
+              className={`tx-tab-btn ${filterType === 'all' ? 'active' : ''}`}
               onClick={() => setFilterType('all')}
             >
               Todos
             </button>
             <button
-              className={`btn-secondary${filterType === 'income' ? ' badge-income' : ''}`}
+              className={`tx-tab-btn income ${filterType === 'income' ? 'active' : ''}`}
               onClick={() => setFilterType('income')}
               title="Entradas"
             >
-              <ArrowUpCircle size={15} />
-              <span className="hide-mobile">Entradas</span>
+              <ArrowUpCircle size={14} />
+              <span>Entradas</span>
             </button>
             <button
-              className={`btn-secondary${filterType === 'expense' ? ' badge-expense' : ''}`}
+              className={`tx-tab-btn expense ${filterType === 'expense' ? 'active' : ''}`}
               onClick={() => setFilterType('expense')}
               title="Saídas"
             >
-              <ArrowDownCircle size={15} />
-              <span className="hide-mobile">Saídas</span>
+              <ArrowDownCircle size={14} />
+              <span>Saídas</span>
             </button>
           </div>
 
-          {/* Sort */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Sort selector */}
+          <div className="tx-sort-wrapper">
             <ArrowUpDown size={14} color="var(--text-muted)" style={{ flexShrink: 0 }} />
             <select
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value as SortOption)}
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '8px',
-                color: 'var(--text-primary)',
-                padding: '6px 10px',
-                fontSize: '0.83rem',
-                cursor: 'pointer',
-                width: 'auto',
-              }}
+              className="tx-sort-select"
             >
               <option value="date_desc">Mais Recente</option>
               <option value="date_asc">Mais Antigo</option>
@@ -212,57 +284,6 @@ export const TransactionsView: React.FC = () => {
               <option value="created_at">Data Registro</option>
             </select>
           </div>
-        </div>
-
-        {/* Row 2: action buttons */}
-        <div className="tx-action-row">
-          <button
-            className="btn-primary tx-action-btn"
-            style={{ background: 'var(--accent-primary)' }}
-            onClick={() => setIsVoiceModalOpen(true)}
-            title="Lançar por Voz"
-          >
-            <Mic size={16} />
-            <span className="hide-mobile">Voz</span>
-          </button>
-
-          <button
-            className="btn-secondary tx-action-btn"
-            onClick={handleExportCSV}
-            title="Exportar CSV"
-          >
-            <Download size={15} />
-            <span className="hide-mobile">CSV</span>
-          </button>
-
-          <button
-            className="btn-secondary tx-action-btn"
-            onClick={handleExportPDF}
-            title="Exportar PDF"
-          >
-            <FileText size={15} />
-            <span className="hide-mobile">PDF</span>
-          </button>
-
-          <button
-            className="btn-primary tx-action-btn"
-            style={{ background: '#10b981', flex: 1 }}
-            onClick={() => handleOpenNew('income')}
-            title="Nova Entrada"
-          >
-            <Plus size={16} />
-            <span>Nova Entrada</span>
-          </button>
-
-          <button
-            className="btn-primary tx-action-btn"
-            style={{ background: '#f43f5e', flex: 1 }}
-            onClick={() => handleOpenNew('expense')}
-            title="Nova Saída"
-          >
-            <Plus size={16} />
-            <span>Nova Saída</span>
-          </button>
         </div>
       </div>
 

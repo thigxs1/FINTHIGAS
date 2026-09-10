@@ -324,7 +324,22 @@ npm run build
 
 ---
 
-_Última atualização: 2026-08-28 — Sessão 13 (Upgrade Multimodal de Áudio com Gemini 2.5 Flash & MediaRecorder)_
+### Sessão 15 — Ajustes Críticos de Responsividade Mobile: Topbar & Toolbar de Transações (Antigravity)
+> Data: 2026-09-10
 
+#### 📱 Correção da Topbar no Mobile (`src/components/Layout/Topbar.tsx` + `src/index.css`)
+- **Remoção de Fixação no Mobile**: O menu do topo (mês/ano/usuário) não fica mais fixo na tela (`position: static` em mobile), permitindo rolagem fluida e eliminando a sobreposição de conteúdo em telas pequenas.
+- **Perfil do Usuário Compacto (Somente Ícone no Mobile)**: Em dispositivos mobile (`max-width: 768px`), o botão de perfil oculta o nome por extenso e o chevron via utilitário `.hide-mobile`, exibindo apenas o avatar circular `[TD]` compacto (32px), impedindo estouro de resolução horizontal da viewport.
+- **Seletores e Ações Otimizados**: Botão de reset de demonstração reduzido a ícone único no mobile (chevron ocultado); seletores de Mês e Ano com larguras máximas contidas e paddings otimizados para encaixe suave até em resoluções de 320px–375px.
+- **Utilitários de Responsividade**: Criadas as classes globais `.hide-mobile` e `.hide-desktop` no `index.css`.
 
+#### 📱 Reestruturação da Toolbar de Entradas & Saídas no Mobile (`src/components/Transactions/TransactionsView.tsx` + `src/index.css`)
+- **Fim da Bagunça de Botões**: Substituído o layout com quebras aleatórias por uma organização elegante e simétrica em **3 linhas planejadas**:
+  1. **Linha 1 (Ações Primárias)**: Botões `[ + Nova Entrada ]` (verde) e `[ + Nova Saída ]` (rose) em grade 2 colunas (50%/50%) no topo da tela, facilitando a adição rápida de transações no mobile.
+  2. **Linha 2 (Busca & Ferramentas)**: Input de busca com botão de limpar (`X`) + grupo de botões utilitários em formato de ícones compactos (`[ 🎙 ]`, `[ 📥 ]`, `[ 📄 ]` com tooltips).
+  3. **Linha 3 (Segmentação & Ordenação)**: Segmented control fluido para tipo (`[ Todos | ↑ Entradas | ↓ Saídas ]`) + seletor compacto de ordenação (`[ ⇅ Mais Recente ▾ ]`).
+- **Consistência Desktop**: No desktop, os botões mantêm o texto completo e posicionamento refinado de acordo com o design system Satoshi.
 
+---
+
+_Última atualização: 2026-09-10 — Sessão 15 (Ajustes de Responsividade Mobile: Topbar & Toolbar de Transações)_

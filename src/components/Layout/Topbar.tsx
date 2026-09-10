@@ -59,14 +59,14 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
         </button>
         
         {/* Period Filters */}
-        <div className="header-filters" style={{ display: 'flex', gap: '8px' }}>
-          <select value={periodFilter.month} onChange={handleMonthChange} style={{ width: 'auto', padding: '6px 10px', fontSize: '0.85rem' }}>
+        <div className="header-filters topbar-period-filters" style={{ display: 'flex', gap: '8px' }}>
+          <select value={periodFilter.month} onChange={handleMonthChange} className="topbar-select topbar-select-month">
             <option value={0}>Ano Inteiro</option>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
               <option key={m} value={m}>{getMonthName(m)}</option>
             ))}
           </select>
-          <select value={periodFilter.year} onChange={handleYearChange} style={{ width: 'auto', padding: '6px 10px', fontSize: '0.85rem' }}>
+          <select value={periodFilter.year} onChange={handleYearChange} className="topbar-select topbar-select-year">
             {years.map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
@@ -95,13 +95,13 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
         <div className="reset-dropdown-wrapper" ref={resetRef}>
           <button
             ref={btnRef}
-            className="btn-secondary"
+            className="btn-secondary topbar-reset-btn"
             style={{ padding: '6px 10px', gap: '4px' }}
             onClick={handleToggleMenu}
             title="Opções de Reset de Dados"
           >
             <RefreshCw size={14} />
-            <ChevronDown size={12} />
+            <ChevronDown size={12} className="hide-mobile" />
           </button>
 
           {showResetMenu && (
@@ -144,32 +144,15 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
             <button
               onClick={() => setShowUserMenu(v => !v)}
               title={user.email}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '24px',
-                padding: '4px 12px 4px 4px',
-                cursor: 'pointer',
-                color: 'var(--text-primary)',
-                fontSize: '0.85rem',
-                fontWeight: 500,
-              }}
+              className="topbar-user-btn"
             >
-              <div style={{
-                width: '28px', height: '28px', borderRadius: '50%',
-                background: 'var(--accent-secondary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.75rem', fontWeight: 700, color: 'white', flexShrink: 0,
-              }}>
+              <div className="topbar-user-avatar">
                 {userInitials}
               </div>
-              <span className="hide-mobile" style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="topbar-user-name hide-mobile">
                 {user.user_metadata?.full_name || user.email?.split('@')[0]}
               </span>
-              <ChevronDown size={14} className="hide-mobile" />
+              <ChevronDown size={14} className="topbar-user-chevron hide-mobile" />
             </button>
 
             {showUserMenu && (
