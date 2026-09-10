@@ -97,34 +97,22 @@ export const ExpenseDonutChart: React.FC = () => {
   };
 
   return (
-    <div className="glass-card" ref={containerRef} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div className="section-header">
+    <div className="glass-card" ref={containerRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+      <div className="section-header donut-header">
         <h3 className="section-title">
           <span style={{ color: '#f43f5e' }}>●</span> Distribuição de Saídas (Gastos)
         </h3>
 
         {/* Category vs Subcategory Toggle */}
-        <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px' }}>
+        <div className="donut-toggle-wrapper">
           <button
             className={`btn-secondary ${viewMode === 'category' ? 'active' : ''}`}
-            style={{
-              padding: '4px 10px',
-              fontSize: '0.78rem',
-              background: viewMode === 'category' ? 'var(--accent-primary)' : 'transparent',
-              color: viewMode === 'category' ? 'white' : 'var(--text-secondary)',
-            }}
             onClick={() => setViewMode('category')}
           >
             Por Categoria
           </button>
           <button
             className={`btn-secondary ${viewMode === 'subcategory' ? 'active' : ''}`}
-            style={{
-              padding: '4px 10px',
-              fontSize: '0.78rem',
-              background: viewMode === 'subcategory' ? 'var(--accent-primary)' : 'transparent',
-              color: viewMode === 'subcategory' ? 'white' : 'var(--text-secondary)',
-            }}
             onClick={() => setViewMode('subcategory')}
           >
             Por Subcategoria
@@ -185,12 +173,10 @@ export const ExpenseDonutChart: React.FC = () => {
           <div
             style={{
               flex: 1,
-              width: isMobile ? '100%' : '45%',
+              width: '100%',
               display: 'flex',
-              flexDirection: isMobile ? 'row' : 'column',
-              flexWrap: isMobile ? 'wrap' : 'nowrap',
-              justifyContent: isMobile ? 'center' : 'flex-start',
-              gap: isMobile ? '10px 14px' : '10px',
+              flexDirection: 'column',
+              gap: '8px',
               maxHeight: isMobile ? 'none' : '250px',
               overflowY: isMobile ? 'visible' : 'auto',
               paddingRight: isMobile ? '0' : '4px',
@@ -206,20 +192,22 @@ export const ExpenseDonutChart: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: '10px',
-                    width: isMobile ? 'auto' : '100%',
+                    width: '100%',
+                    padding: '2px 0',
+                    borderBottom: '1px solid rgba(255,255,255,0.03)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                     <span
                       style={{
-                        width: '12px',
-                        height: '12px',
+                        width: '10px',
+                        height: '10px',
                         borderRadius: '3px',
                         backgroundColor: item.color,
                         flexShrink: 0,
                       }}
                     />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#e2e8f0' }}>{item.name}</span>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 500, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f43f5e', marginLeft: '6px' }}>

@@ -75,24 +75,30 @@ export const CashFlowChart: React.FC = () => {
     scales: {
       x: {
         grid: { display: false },
-        ticks: { color: '#64748b' },
+        ticks: {
+          color: '#64748b',
+          maxRotation: 0,
+          autoSkip: true,
+          font: { size: 10 },
+        },
       },
       y: {
         grid: { color: 'rgba(255, 255, 255, 0.05)' },
         ticks: {
           color: '#64748b',
           callback: (value: any) => `R$ ${value}`,
+          font: { size: 10 },
         },
       },
     },
   };
 
   return (
-    <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
       <div className="section-header">
         <h3 className="section-title">📊 Fluxo Anual: Entradas vs Saídas ({currentYear})</h3>
       </div>
-      <div style={{ position: 'relative', height: '280px', width: '100%', marginTop: '10px' }}>
+      <div style={{ position: 'relative', height: '280px', width: '100%', maxWidth: '100%', overflow: 'hidden', marginTop: '10px' }}>
         <Bar data={data} options={options} />
       </div>
     </div>

@@ -342,4 +342,25 @@ npm run build
 
 ---
 
-_Última atualização: 2026-09-10 — Sessão 15 (Ajustes de Responsividade Mobile: Topbar & Toolbar de Transações)_
+### Sessão 16 — Centralização Perfeita dos Cards do Dashboard e Botão de Relevância Ícone-Único (Antigravity)
+> Data: 2026-09-10
+
+#### 📊 Centralização e Contenção dos Cards do Dashboard (`ExpenseDonutChart.tsx`, `CashFlowChart.tsx`, `src/index.css`)
+- **Correção da Descentralização no Mobile**: Os cards "Distribuição de Saídas" e "Fluxo Anual" sofriam expansão horizontal e desalinhamento decorrentes do título rígido, toggle não-responsivo e canvas do Chart.js que quebravam a largura do viewport.
+- **Contenção Estrita de Layout**:
+  - `.dashboard-grid`: Adicionado `grid-template-columns: minmax(0, 1fr)` e contenção de filhos com `min-width: 0; max-width: 100%`, impedindo qualquer expansão horizontal forçada.
+  - `.glass-card, .card`: Receberam `width: 100%; max-width: 100%; box-sizing: border-box;` e padding responsivo de `16px` no mobile (em vez dos 24px que estrangulavam o espaço útil).
+  - `.layout-wrapper`, `.main-wrapper` e `.content-area`: Adicionados `overflow-x: hidden; width: 100%; max-width: 100%`, garantindo alinhamento centralizado e simetria perfeita em qualquer celular.
+- **Toggle Responsivo no Donut (`donut-toggle-wrapper`)**: No mobile, o alternador de visualização "Por Categoria / Por Subcategoria" agora se transforma em um segmented control de 2 colunas abaixo do título, acabando com a sobreposição de elementos no cabeçalho.
+- **Adequação do Fluxo Anual (`CashFlowChart.tsx`)**: Canvas encapsulado com `max-width: 100%; overflow: hidden`, legendas compactas e `autoSkip` nos rótulos de meses no eixo X.
+
+#### 🔀 Botão de Relevância / Ordenação Somente Ícone no Mobile (`TransactionsView.tsx` + `src/index.css`)
+- **Remoção do Texto "Mais Recente" no Mobile**: Conforme solicitado, o botão de ordenação/relevância agora exibe **somente o ícone `[ ⇅ ]`** no mobile, sem texto por extenso visível.
+- **Botão Ícone de 36x36px Acessível**: O elemento virou um botão quadrado compacto de 36x36px perfeitamente alinhado ao lado das abas de filtro ("Todos", "Entradas", "Saídas").
+- **Preservação da Funcionalidade Nativa**: O elemento `<select>` continua posicionado com opacidade zero sobre o botão (`position: absolute; inset: 0`), de modo que ao tocar no ícone, o seletor nativo do sistema operacional (iOS ActionSheet / Android Picker) se abre imediatamente.
+- **Experiência Desktop Preservada**: Em telas maiores (> 768px), o botão continua exibindo o ícone com o texto legível normalmente.
+
+---
+
+_Última atualização: 2026-09-10 — Sessão 16 (Centralização dos Cards Dashboard e Botão de Relevância Ícone-Único)_
+
