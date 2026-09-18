@@ -451,5 +451,28 @@ _Última atualização: 2026-09-10 — Sessão 17 (Substituição de Logo e Nova
 
 ---
 
-_Última atualização: 2026-09-10 — Sessão 18 (Correção da Sidebar Desktop e Ícone Inteiriço no iPhone)_
+_Última atualização: 2026-09-18 — Sessão 19 (Espaçamento em Programados, Menu Usuário e Persistência de Formulários ao Alternar Abas/Apps)_
+
+### Sessão 19 — Espaçamento em Programados, Dropdown de Usuário e Persistência de Rascunho (Antigravity)
+> Data: 2026-09-18
+
+#### 📅 Espaçamento dos Cards em "Programados" (`ScheduledView.tsx` + `src/index.css`)
+- **Bug**: A classe `.scheduled-grid` estava sem definição no CSS, fazendo com que os cards `.glass-card` fossem renderizados em bloco com margem zero, colando as bordas superiores e inferiores tanto no desktop quanto no mobile.
+- **Solução**:
+  - Criada a classe `.scheduled-grid` no `src/index.css` com `display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;`.
+  - Breakpoint mobile (≤640px) configurado com `grid-template-columns: 1fr; gap: 14px;`, garantindo espaçamento limpo e proporcional entre todos os agendamentos.
+
+#### 👤 Correção do Menu Dropdown de Usuário no Topbar (`Topbar.tsx` + `src/index.css`)
+- **Bug**: As classes `.reset-dropdown-wrapper` e `.reset-dropdown-menu` estavam ausentes no `index.css`. O menu do usuário era renderizado em fluxo estático (`position: static`) dentro do flexbox do header de 64px, fazendo a caixa se esticar, empurrar o layout para cima e sobrepor o topo da tela de forma quebrada.
+- **Solução**:
+  - Implementadas no `src/index.css` as classes `.reset-dropdown-wrapper`, `.reset-dropdown-menu` (`position: absolute; right: 0; top: calc(100% + 8px); z-index: 100; min-width: 240px;`) e `.reset-dropdown-item`.
+  - No `Topbar.tsx`, o wrapper do usuário agora possui `position: relative; display: flex; align-items: center;`. O botão de perfil do usuário não sofre mais deformações e o menu abre perfeitamente alinhado abaixo dele sem deslocar nenhum botão adjacente.
+
+#### 🛡️ Persistência de Formulários ao Alternar Janelas/Apps (`TransactionModal.tsx`, `ScheduledModal.tsx`, `FinanceContext.tsx`)
+- **Bug**: Ao alternar de aba no navegador ou alternar de app no celular (ex: ir ao app do banco copiar valor/Pix), os eventos de `focus` e `visibilitychange` disparavam `loadFromSupabase()`, que atualizava a lista de `categories`. Os modais tinham `categories` em seus `useEffect` de inicialização e não verificavam se o modal já estava aberto, disparando o reset de todos os inputs para string vazia.
+- **Solução**:
+  - **Isolamento de Ciclo de Vida**: Adicionados `wasOpenRef` e `prevEditingIdRef` em `TransactionModal` e `ScheduledModal` para que a inicialização dos campos ocorra única e exclusivamente quando o modal transiciona de fechado para aberto (`isOpen && !wasOpenRef.current`), nunca mais sendo reinicializado por re-renders de contexto enquanto o modal está ativo.
+  - **Persistência de Rascunho**: Integração com `sessionStorage` (`finthigas_tx_draft` e `finthigas_scheduled_draft`) em tempo real enquanto o usuário digita. Caso o sistema operacional suspenda a página em segundo plano, os dados preenchidos são recuperados automaticamente. O rascunho é limpo somente ao salvar ou cancelar deliberadamente o modal.
+  - **Sincronização em Segundo Plano Não-Destrutiva**: `loadFromSupabase` agora aceita parâmetro `isBackground: true` para revalidações de `focus`/`visibilitychange` (sem disparar spinner global `setLoading(true)`), conta com throttling de 3s contra disparos duplicados em rajada e compara os dados recebidos com o estado anterior antes de atualizar referências de array.
+
 

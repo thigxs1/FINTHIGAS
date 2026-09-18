@@ -108,7 +108,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Initial Fetch from Supabase
   // Fetch function to sync with Supabase
-  const loadFromSupabase = useCallback(async () => {
+  const loadFromSupabase = useCallback(async (isBackground = false) => {
     if (!isSupabaseConfigured) {
       setLoading(false);
       return;
@@ -121,7 +121,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     try {
-      setLoading(true);
+      if (!isBackground) {
+        setLoading(true);
+      }
 
       // Fetch Categories — filtered by user_id (RLS also enforces this)
       const { data: dbCategories, error: catError } = await supabase
@@ -131,7 +133,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (!catError) {
         setSupabaseConnected(true);
         if (dbCategories !== null) {
-          setCategories(dbCategories.length > 0 ? dbCategories : DEFAULT_CATEGORIES);
+          const nextCats = dbCategories.length > 0 ? dbCategories : DEFAULT_CATEGORIES;
+          setCategories((prev) => {
+            return JSON.stringify(prev) === JSON.stringify(nextCats) ? prev : nextCats;
+          });
         }
       }
 
@@ -142,7 +147,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .order('date', { ascending: false });
 
       if (!txError && dbTransactions !== null) {
-        setTransactions(dbTransactions);
+        setTransactions((prev) => {
+          return JSON.stringify(prev) === JSON.stringify(dbTransactions) ? prev : dbTransactions;
+        });
       }
 
       // Fetch Scheduled
@@ -152,24 +159,38 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .order('due_date', { ascending: true });
 
       if (!schError && dbScheduled !== null) {
-        setScheduledTransactions(dbScheduled);
+        setScheduledTransactions((prev) => {
+          return JSON.stringify(prev) === JSON.stringify(dbScheduled) ? prev : dbScheduled;
+        });
       }
     } catch (err) {
       console.warn('Supabase connection error, fallback to LocalStorage:', err);
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   }, [userId]);
 
   // Initial Fetch when user logs in + Auto-sync on window focus
   useEffect(() => {
     if (userId) {
-      loadFromSupabase();
+      loadFromSupabase(false);
     }
 
-    const handleFocus = () => { if (userId) loadFromSupabase(); };
+    let lastSync = 0;
+    const triggerSync = () => {
+      const now = Date.now();
+      // Throttle background sync to at most once every 3 seconds
+      if (now - lastSync > 3000 && userId) {
+        lastSync = now;
+        loadFromSupabase(true);
+      }
+    };
+
+    const handleFocus = () => triggerSync();
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && userId) loadFromSupabase();
+      if (document.visibilityState === 'visible') triggerSync();
     };
 
     window.addEventListener('focus', handleFocus);

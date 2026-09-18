@@ -487,6 +487,56 @@ select option {
 }
 
 /* ================================
+   DROPDOWNS (Reset & User Menu)
+================================ */
+.reset-dropdown-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.reset-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  overflow: hidden;
+  min-width: 240px;
+  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reset-dropdown-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  background: none;
+  width: 100%;
+  color: var(--text-primary);
+  gap: 2px;
+}
+
+.reset-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.reset-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ================================
    RESPONSIVE UTILITIES
 ================================ */
 @media (max-width: 768px) {
@@ -844,6 +894,23 @@ select option {
   .dashboard-grid {
     gap: 12px;
     margin-bottom: 12px;
+  }
+}
+
+/* ================================
+   SCHEDULED CARDS GRID
+================================ */
+.scheduled-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .scheduled-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 }
 

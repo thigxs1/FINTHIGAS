@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { ScheduledTransaction, TransactionType, FrequencyType } from '../../types';
 import { X } from 'lucide-react';
@@ -8,6 +8,8 @@ interface ScheduledModalProps {
   onClose: () => void;
   editingScheduled?: ScheduledTransaction | null;
 }
+
+const SCHEDULED_DRAFT_KEY = 'finthigas_scheduled_draft';
 
 export const ScheduledModal: React.FC<ScheduledModalProps> = ({
   isOpen,
@@ -24,26 +26,90 @@ export const ScheduledModal: React.FC<ScheduledModalProps> = ({
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
 
-  useEffect(() => {
-    if (editingScheduled) {
-      setType(editingScheduled.type);
-      setDescription(editingScheduled.description);
-      setAmount(editingScheduled.amount.toString());
-      setFrequency(editingScheduled.frequency);
-      setDueDate(editingScheduled.due_date);
-      setCategoryId(editingScheduled.category_id || '');
-      setSubcategoryId(editingScheduled.subcategory_id || '');
-    } else {
-      setType('expense');
-      setDescription('');
-      setAmount('');
-      setFrequency('monthly');
-      setDueDate(new Date().toISOString().split('T')[0]);
-      const expCat = categories.filter((c) => c.type === 'expense');
-      setCategoryId(expCat[0]?.id || '');
-      setSubcategoryId('');
+  const wasOpenRef = useRef(false);
+  const prevEditingIdRef = useRef<string | undefined>(undefined);
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
+
+  const getDraft = () => {
+    try {
+      const saved = sessionStorage.getItem(SCHEDULED_DRAFT_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
     }
-  }, [editingScheduled, isOpen, categories]);
+  };
+
+  const clearDraft = () => {
+    try {
+      sessionStorage.removeItem(SCHEDULED_DRAFT_KEY);
+    } catch {}
+  };
+
+  const handleClose = () => {
+    clearDraft();
+    onClose();
+  };
+
+  useEffect(() => {
+    const currentId = editingScheduled?.id;
+    const isOpening = isOpen && !wasOpenRef.current;
+    const isTargetChanged = isOpen && Boolean(editingScheduled && currentId !== prevEditingIdRef.current);
+
+    if (isOpening || isTargetChanged) {
+      if (editingScheduled) {
+        setType(editingScheduled.type);
+        setDescription(editingScheduled.description);
+        setAmount(editingScheduled.amount.toString());
+        setFrequency(editingScheduled.frequency);
+        setDueDate(editingScheduled.due_date);
+        setCategoryId(editingScheduled.category_id || '');
+        setSubcategoryId(editingScheduled.subcategory_id || '');
+      } else {
+        const draft = getDraft();
+        if (draft) {
+          setType(draft.type || 'expense');
+          setDescription(draft.description || '');
+          setAmount(draft.amount || '');
+          setFrequency(draft.frequency || 'monthly');
+          setDueDate(draft.dueDate || new Date().toISOString().split('T')[0]);
+          setCategoryId(draft.categoryId || '');
+          setSubcategoryId(draft.subcategoryId || '');
+        } else {
+          setType('expense');
+          setDescription('');
+          setAmount('');
+          setFrequency('monthly');
+          setDueDate(new Date().toISOString().split('T')[0]);
+          const expCat = categoriesRef.current.filter((c) => c.type === 'expense');
+          setCategoryId(expCat[0]?.id || '');
+          setSubcategoryId('');
+        }
+      }
+    }
+
+    wasOpenRef.current = isOpen;
+    prevEditingIdRef.current = currentId;
+  }, [isOpen, editingScheduled]);
+
+  // Persist draft in real-time when user enters data into a new scheduled transaction
+  useEffect(() => {
+    if (!isOpen || editingScheduled) return;
+    try {
+      sessionStorage.setItem(
+        SCHEDULED_DRAFT_KEY,
+        JSON.stringify({
+          type,
+          description,
+          amount,
+          frequency,
+          dueDate,
+          categoryId,
+          subcategoryId,
+        })
+      );
+    } catch {}
+  }, [isOpen, editingScheduled, type, description, amount, frequency, dueDate, categoryId, subcategoryId]);
 
   if (!isOpen) return null;
 
@@ -75,15 +141,16 @@ export const ScheduledModal: React.FC<ScheduledModalProps> = ({
       await addScheduledTransaction(payload);
     }
 
+    clearDraft();
     onClose();
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{editingScheduled ? 'Editar Lançamento Programado' : 'Novo Lançamento Programado'}</h3>
-          <button className="btn-secondary" style={{ padding: '6px' }} onClick={onClose}>
+          <button className="btn-secondary" style={{ padding: '6px' }} onClick={handleClose}>
             <X size={18} />
           </button>
         </div>
@@ -212,7 +279,7 @@ export const ScheduledModal: React.FC<ScheduledModalProps> = ({
           </div>
 
           <div className="modal-footer">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+            <button type="button" className="btn-secondary" onClick={handleClose}>
               Cancelar
             </button>
             <button type="submit" className="btn-primary">

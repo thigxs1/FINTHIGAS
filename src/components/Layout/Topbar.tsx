@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
-import { ChevronDown, Database, RefreshCw, Trash2, LogOut, User, Menu } from 'lucide-react';
+import { ChevronDown, Database, RefreshCw, Trash2, LogOut, Menu } from 'lucide-react';
 import { getMonthName } from '../../utils/formatters';
 
 interface TopbarProps {
@@ -16,8 +16,6 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const resetRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const [dropdownTop, setDropdownTop] = useState(0);
 
   const userInitials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -32,12 +30,8 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
   };
 
   const handleToggleMenu = useCallback(() => {
-    if (!showResetMenu && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setDropdownTop(rect.bottom + 6);
-    }
     setShowResetMenu((v) => !v);
-  }, [showResetMenu]);
+  }, []);
 
   // Close menus on outside click
   useEffect(() => {
@@ -94,7 +88,6 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
         {/* Reset Dropdown */}
         <div className="reset-dropdown-wrapper" ref={resetRef}>
           <button
-            ref={btnRef}
             className="btn-secondary topbar-reset-btn"
             style={{ padding: '6px 10px', gap: '4px' }}
             onClick={handleToggleMenu}
@@ -105,10 +98,9 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
           </button>
 
           {showResetMenu && (
-            <div className="reset-dropdown-menu" style={{ top: dropdownTop, right: 0 }}>
+            <div className="reset-dropdown-menu" style={{ top: 'calc(100% + 8px)', right: 0 }}>
               <button
                 className="reset-dropdown-item"
-                style={{ padding: '12px 16px', background: 'none', border: 'none', borderBottom: '1px solid var(--border-color)', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--text-primary)' }}
                 onClick={() => {
                   setShowResetMenu(false);
                   if (confirm('Resetar para os dados de demonstração originais?')) {
@@ -121,7 +113,6 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
               </button>
               <button
                 className="reset-dropdown-item"
-                style={{ padding: '12px 16px', background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
                 onClick={() => {
                   setShowResetMenu(false);
                   if (confirm('⚠️ Isso apagará TODOS os dados. Deseja começar do zero?')) {
@@ -140,7 +131,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
 
         {/* User Avatar & Logout */}
         {user && (
-          <div ref={userRef} style={{ position: 'relative' }}>
+          <div ref={userRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <button
               onClick={() => setShowUserMenu(v => !v)}
               title={user.email}
@@ -156,15 +147,17 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
             </button>
 
             {showUserMenu && (
-              <div className="reset-dropdown-menu" style={{ top: 'calc(100% + 8px)', right: 0, minWidth: '220px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)' }}>
-                <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)' }}>
+              <div className="reset-dropdown-menu" style={{ top: 'calc(100% + 8px)', right: 0, minWidth: '220px' }}>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-color)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <User size={16} color="var(--text-muted)" />
-                    <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <div className="topbar-user-avatar" style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}>
+                      {userInitials}
+                    </div>
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {user.user_metadata?.full_name || 'Usuário'}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {user.email}
                       </div>
                     </div>
@@ -175,7 +168,8 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidebar }) => {
                     setShowUserMenu(false);
                     if (confirm('Deseja sair da sua conta?')) await signOut();
                   }}
-                  style={{ width: '100%', textAlign: 'left', padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px' }}
+                  className="reset-dropdown-item"
+                  style={{ cursor: 'pointer' }}
                 >
                   <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--accent-expense)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <LogOut size={14} /> Sair da Conta

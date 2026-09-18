@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { Transaction, TransactionType } from '../../types';
 import { X } from 'lucide-react';
@@ -9,6 +9,8 @@ interface TransactionModalProps {
   initialType?: TransactionType;
   editingTransaction?: Transaction | null;
 }
+
+const TX_DRAFT_KEY = 'finthigas_tx_draft';
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
@@ -30,34 +32,106 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [receiptUrl, setReceiptUrl] = useState<string | undefined>(undefined);
   const [receiptName, setReceiptName] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    if (editingTransaction) {
-      setType(editingTransaction.type);
-      setDescription(editingTransaction.description);
-      setAmount(editingTransaction.amount.toString());
-      setDate(editingTransaction.date);
-      setCategoryId(editingTransaction.category_id || '');
-      setSubcategoryId(editingTransaction.subcategory_id || '');
-      setPaymentMethod(editingTransaction.payment_method || 'Pix');
-      setIsPaid(editingTransaction.is_paid);
-      setNotes(editingTransaction.notes || '');
-      setReceiptUrl(editingTransaction.receipt_url);
-      setReceiptName(editingTransaction.receipt_name);
-    } else {
-      setType(initialType);
-      setDescription('');
-      setAmount('');
-      setDate(new Date().toISOString().split('T')[0]);
-      const availableCategories = categories.filter((c) => c.type === initialType);
-      setCategoryId(availableCategories[0]?.id || '');
-      setSubcategoryId('');
-      setPaymentMethod('Pix');
-      setIsPaid(true);
-      setNotes('');
-      setReceiptUrl(undefined);
-      setReceiptName(undefined);
+  const wasOpenRef = useRef(false);
+  const prevEditingIdRef = useRef<string | undefined>(undefined);
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
+
+  const getDraft = () => {
+    try {
+      const saved = sessionStorage.getItem(TX_DRAFT_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
     }
-  }, [editingTransaction, initialType, isOpen, categories]);
+  };
+
+  const clearDraft = () => {
+    try {
+      sessionStorage.removeItem(TX_DRAFT_KEY);
+    } catch {}
+  };
+
+  const handleClose = () => {
+    clearDraft();
+    onClose();
+  };
+
+  useEffect(() => {
+    const currentId = editingTransaction?.id;
+    const isOpening = isOpen && !wasOpenRef.current;
+    const isTargetChanged = isOpen && Boolean(editingTransaction && currentId !== prevEditingIdRef.current);
+
+    if (isOpening || isTargetChanged) {
+      if (editingTransaction) {
+        setType(editingTransaction.type);
+        setDescription(editingTransaction.description);
+        setAmount(editingTransaction.amount.toString());
+        setDate(editingTransaction.date);
+        setCategoryId(editingTransaction.category_id || '');
+        setSubcategoryId(editingTransaction.subcategory_id || '');
+        setPaymentMethod(editingTransaction.payment_method || 'Pix');
+        setIsPaid(editingTransaction.is_paid);
+        setNotes(editingTransaction.notes || '');
+        setReceiptUrl(editingTransaction.receipt_url);
+        setReceiptName(editingTransaction.receipt_name);
+      } else {
+        const draft = getDraft();
+        if (draft) {
+          setType(draft.type || initialType);
+          setDescription(draft.description || '');
+          setAmount(draft.amount || '');
+          setDate(draft.date || new Date().toISOString().split('T')[0]);
+          setCategoryId(draft.categoryId || '');
+          setSubcategoryId(draft.subcategoryId || '');
+          setPaymentMethod(draft.paymentMethod || 'Pix');
+          setIsPaid(draft.isPaid !== undefined ? draft.isPaid : true);
+          setNotes(draft.notes || '');
+          setReceiptUrl(draft.receiptUrl);
+          setReceiptName(draft.receiptName);
+        } else {
+          setType(initialType);
+          setDescription('');
+          setAmount('');
+          setDate(new Date().toISOString().split('T')[0]);
+          const availableCategories = categoriesRef.current.filter((c) => c.type === initialType);
+          setCategoryId(availableCategories[0]?.id || '');
+          setSubcategoryId('');
+          setPaymentMethod('Pix');
+          setIsPaid(true);
+          setNotes('');
+          setReceiptUrl(undefined);
+          setReceiptName(undefined);
+        }
+      }
+    }
+
+    wasOpenRef.current = isOpen;
+    prevEditingIdRef.current = currentId;
+  }, [isOpen, editingTransaction, initialType]);
+
+  // Persist draft in real-time when user enters data into a new transaction
+  useEffect(() => {
+    if (!isOpen || editingTransaction) return;
+    try {
+      sessionStorage.setItem(
+        TX_DRAFT_KEY,
+        JSON.stringify({
+          type,
+          description,
+          amount,
+          date,
+          categoryId,
+          subcategoryId,
+          paymentMethod,
+          isPaid,
+          notes,
+          receiptUrl,
+          receiptName,
+        })
+      );
+    } catch {}
+  }, [isOpen, editingTransaction, type, description, amount, date, categoryId, subcategoryId, paymentMethod, isPaid, notes, receiptUrl, receiptName]);
 
   if (!isOpen) return null;
 
@@ -115,15 +189,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       await addTransaction(payload);
     }
 
+    clearDraft();
     onClose();
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{editingTransaction ? 'Editar Movimentação' : 'Nova Movimentação'}</h3>
-          <button className="btn-secondary" style={{ padding: '6px' }} onClick={onClose}>
+          <button className="btn-secondary" style={{ padding: '6px' }} onClick={handleClose}>
             <X size={18} />
           </button>
         </div>
@@ -327,7 +402,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
 
           <div className="modal-footer">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+            <button type="button" className="btn-secondary" onClick={handleClose}>
               Cancelar
             </button>
             <button type="submit" className="btn-primary">
