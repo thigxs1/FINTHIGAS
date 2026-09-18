@@ -453,26 +453,115 @@ _Última atualização: 2026-09-10 — Sessão 17 (Substituição de Logo e Nova
 
 _Última atualização: 2026-09-18 — Sessão 19 (Espaçamento em Programados, Menu Usuário e Persistência de Formulários ao Alternar Abas/Apps)_
 
-### Sessão 19 — Espaçamento em Programados, Dropdown de Usuário e Persistência de Rascunho (Antigravity)
+---
+
+### ⚠️ Sessão 20 — Incidente de Segurança: Credenciais Expostas no GitHub e Rollback (Antigravity)
 > Data: 2026-09-18
 
-#### 📅 Espaçamento dos Cards em "Programados" (`ScheduledView.tsx` + `src/index.css`)
-- **Bug**: A classe `.scheduled-grid` estava sem definição no CSS, fazendo com que os cards `.glass-card` fossem renderizados em bloco com margem zero, colando as bordas superiores e inferiores tanto no desktop quanto no mobile.
-- **Solução**:
-  - Criada a classe `.scheduled-grid` no `src/index.css` com `display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;`.
-  - Breakpoint mobile (≤640px) configurado com `grid-template-columns: 1fr; gap: 14px;`, garantindo espaçamento limpo e proporcional entre todos os agendamentos.
+#### 🔴 O Incidente
 
-#### 👤 Correção do Menu Dropdown de Usuário no Topbar (`Topbar.tsx` + `src/index.css`)
-- **Bug**: As classes `.reset-dropdown-wrapper` e `.reset-dropdown-menu` estavam ausentes no `index.css`. O menu do usuário era renderizado em fluxo estático (`position: static`) dentro do flexbox do header de 64px, fazendo a caixa se esticar, empurrar o layout para cima e sobrepor o topo da tela de forma quebrada.
-- **Solução**:
-  - Implementadas no `src/index.css` as classes `.reset-dropdown-wrapper`, `.reset-dropdown-menu` (`position: absolute; right: 0; top: calc(100% + 8px); z-index: 100; min-width: 240px;`) e `.reset-dropdown-item`.
-  - No `Topbar.tsx`, o wrapper do usuário agora possui `position: relative; display: flex; align-items: center;`. O botão de perfil do usuário não sofre mais deformações e o menu abre perfeitamente alinhado abaixo dele sem deslocar nenhum botão adjacente.
+**O que aconteceu:**
+- O arquivo `log_antigravity.txt` continha as credenciais do Supabase hardcoded (URL e `anon_key`) nas seções de documentação.
+- O arquivo foi commitado e publicado no GitHub via `git push`, expondo as chaves publicamente.
+- Além disso, `src/lib/supabase.ts` possuía as credenciais como fallback hardcoded no código-fonte, também presentes no repositório.
 
-#### 🛡️ Persistência de Formulários ao Alternar Janelas/Apps (`TransactionModal.tsx`, `ScheduledModal.tsx`, `FinanceContext.tsx`)
-- **Bug**: Ao alternar de aba no navegador ou alternar de app no celular (ex: ir ao app do banco copiar valor/Pix), os eventos de `focus` e `visibilitychange` disparavam `loadFromSupabase()`, que atualizava a lista de `categories`. Os modais tinham `categories` em seus `useEffect` de inicialização e não verificavam se o modal já estava aberto, disparando o reset de todos os inputs para string vazia.
-- **Solução**:
-  - **Isolamento de Ciclo de Vida**: Adicionados `wasOpenRef` e `prevEditingIdRef` em `TransactionModal` e `ScheduledModal` para que a inicialização dos campos ocorra única e exclusivamente quando o modal transiciona de fechado para aberto (`isOpen && !wasOpenRef.current`), nunca mais sendo reinicializado por re-renders de contexto enquanto o modal está ativo.
-  - **Persistência de Rascunho**: Integração com `sessionStorage` (`finthigas_tx_draft` e `finthigas_scheduled_draft`) em tempo real enquanto o usuário digita. Caso o sistema operacional suspenda a página em segundo plano, os dados preenchidos são recuperados automaticamente. O rascunho é limpo somente ao salvar ou cancelar deliberadamente o modal.
-  - **Sincronização em Segundo Plano Não-Destrutiva**: `loadFromSupabase` agora aceita parâmetro `isBackground: true` para revalidações de `focus`/`visibilitychange` (sem disparar spinner global `setLoading(true)`), conta com throttling de 3s contra disparos duplicados em rajada e compara os dados recebidos com o estado anterior antes de atualizar referências de array.
+**Credenciais expostas:**
+```
+VITE_SUPABASE_URL=https://hrqkxaakcknqzeauilyt.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_jYnKZTpuHCPE0U5wmVP3Og_Nsl6_CvA
+```
 
+> ℹ️ **Nota**: A `anon_key` do Supabase é uma chave **pública por design** (prefixo `sb_publishable_`). Ela não concede acesso administrativo e é protegida pelas políticas de Row Level Security (RLS) configuradas no banco. O risco real é limitado a ataques de volume (DDoS via API) ou enumeração de dados se o RLS estiver mal configurado.
+
+---
+
+#### 🔧 O Que Foi Tentado (e Por Que Falhou)
+
+**Commit `9d71fa3`** — `security: remove credentials from code, untrack log_antigravity and add to .gitignore`
+
+As seguintes ações foram executadas:
+1. **`.gitignore` atualizado** para incluir `log_antigravity.txt` e `.env.local`.
+2. **`git rm --cached log_antigravity.txt`** — removeu o arquivo do rastreamento do Git (mas manteve o arquivo local).
+3. **`src/lib/supabase.ts` atualizado** — removidos os fallbacks hardcoded, passando a exigir exclusivamente as variáveis de ambiente `VITE_*` sem valor padrão.
+4. **`git push`** para o GitHub com essas alterações.
+
+**Por que o app foi ao ar como "Not Found":**
+- Na plataforma de hospedagem (Vercel/Netlify), as variáveis de ambiente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` **não estavam configuradas** no painel da plataforma.
+- Com os fallbacks removidos do código, `supabaseUrl` e `supabaseAnonKey` passaram a ser `undefined`.
+- `createClient(undefined, undefined)` lança exceção na inicialização do módulo → o bundle quebra → a aplicação retorna 404/Not Found.
+
+---
+
+#### ↩️ Rollback
+
+**Commit `f91311f`** — `Revert "security: remove credentials from code, untrack log_antigravity and add to .gitignore"`
+
+O revert restaurou:
+- `log_antigravity.txt` de volta ao repositório
+- `src/lib/supabase.ts` com os fallbacks hardcoded
+- `.gitignore` sem as entradas de segurança
+
+O app voltou ao estado funcional anterior.
+
+---
+
+#### 📋 Guia: Como Fazer Corretamente (Para Futuras Migrações de Hospedagem)
+
+Se no futuro for decidido mudar a hospedagem (Vercel → Netlify, Railway, Cloudflare Pages, etc.) ou limpar o histórico do repositório, seguir este roteiro:
+
+**Passo 1 — Configurar variáveis de ambiente na NOVA plataforma ANTES de alterar o código:**
+```
+VITE_SUPABASE_URL=https://hrqkxaakcknqzeauilyt.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_jYnKZTpuHCPE0U5wmVP3Og_Nsl6_CvA
+GEMINI_API_KEY=<sua chave>
+```
+> ⚠️ Verificar que o build na plataforma lê as variáveis `VITE_*` corretamente antes de prosseguir.
+
+**Passo 2 — Remover os fallbacks do `src/lib/supabase.ts`:**
+```ts
+// ANTES (inseguro):
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://...supabase.co';
+
+// DEPOIS (seguro):
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+if (!supabaseUrl) throw new Error('VITE_SUPABASE_URL não configurada');
+```
+
+**Passo 3 — Adicionar ao `.gitignore`:**
+```
+.env.local
+.env
+log_antigravity.txt
+```
+
+**Passo 4 — Remover do rastreamento sem deletar o arquivo local:**
+```bash
+git rm --cached log_antigravity.txt
+git rm --cached .env.local   # se estiver rastreado
+git add .gitignore
+git commit -m "security: untrack sensitive files and add to .gitignore"
+```
+
+**Passo 5 — Verificar o deploy** na plataforma nova antes de fazer `git push`.
+
+**Passo 6 (Opcional — Limpar histórico):** Se quiser apagar as credenciais dos commits anteriores:
+```bash
+# Reescreve o histórico removendo o arquivo de todos os commits passados
+git filter-branch --force --index-filter \
+  "git rm --cached --ignore-unmatch log_antigravity.txt" \
+  --prune-empty --tag-name-filter cat -- --all
+
+# OU usando a ferramenta mais moderna:
+npx @github-actions/git-filter-repo --path log_antigravity.txt --invert-paths
+git push origin --force --all
+```
+> ⚠️ `git push --force` reescreve o histórico remoto. Coordenar com todos os colaboradores antes.
+
+**Passo 7 — Revogar e regenerar credenciais comprometidas** (boa prática após qualquer exposição):
+- Supabase: `Settings → API → Regenerate anon key`
+- Google AI Studio: revogar e gerar nova `GEMINI_API_KEY`
+
+---
+
+_Última atualização: 2026-09-18 — Sessão 20 (Incidente de Segurança: Credenciais Expostas e Rollback)_
 
